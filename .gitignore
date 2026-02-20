@@ -1,0 +1,35 @@
+# Dependencies
+/node_modules
+/client/node_modules
+/server/node_modules
+
+# Environment variables
+.env
+client/.env
+server/.env
+.env.local
+
+# Logs
+*.log
+logs
+*.log.*
+
+# IDE / Editor specific
+.vscode/
+.idea/
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Build output
+/dist
+/client/dist
+
+# Misc
+response.json
+server_log.txt
+server_log_tail_utf8.txt
+server_log_tail_utf8_v2.txt
+server_log_utf8.txt
+test_api.js
