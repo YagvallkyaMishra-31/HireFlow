@@ -10,6 +10,7 @@ import JobList from './pages/JobList';
 import JobDetails from './pages/JobDetails';
 import RecruiterDashboard from './pages/RecruiterDashboard';
 import CandidateDashboard from './pages/CandidateDashboard';
+import ResumeAnalyzer from './pages/ResumeAnalyzer';
 
 const Home = () => <Navigate to="/jobs" replace />;
 
@@ -40,6 +41,14 @@ function App() {
                             element={
                                 <ProtectedRoute allowedRoles={['candidate']}>
                                     <CandidateDashboard />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/resume-analyzer"
+                            element={
+                                <ProtectedRoute>
+                                    <ResumeAnalyzer />
                                 </ProtectedRoute>
                             }
                         />
