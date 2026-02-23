@@ -67,7 +67,13 @@ const applicationSchema = new mongoose.Schema(
     history: {
       type: [historyEntrySchema],
       default: []
-    }
+    },
+
+    // 🔹 AI Match Scores
+    matchScore: { type: Number, default: 0 },
+    skillScore: { type: Number, default: 0 },
+    experienceScore: { type: Number, default: 0 },
+    locationScore: { type: Number, default: 0 }
   },
   {
     timestamps: true

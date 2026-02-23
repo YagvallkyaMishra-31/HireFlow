@@ -28,25 +28,24 @@ body {
   line-height: 1.6;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  font-size: 16px;
+  /* Increased from default */
 }
 
 .app-container {
   max-width: 1440px;
   margin: 0 auto;
-  padding: 28px 2.5rem;
+  padding: 0 2.5rem 28px 2.5rem;
 }
 
 /* Global Typography Scaling */
-h1,
-h2,
-h3 {
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 1.1;
+h1 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
 }
 
 h2 {
-  font-size: 2rem;
+  font-size: 2.1rem;
   margin-bottom: 1.5rem;
   color: var(--text-main);
 }
@@ -105,6 +104,7 @@ input:focus {
 input::placeholder {
   color: var(--secondary-color);
 }
+
 .timeline {
   border-left: 2px solid #e5e7eb;
   padding-left: 20px;

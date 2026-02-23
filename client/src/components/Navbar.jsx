@@ -25,6 +25,15 @@ const Navbar = () => {
             Browse Jobs
           </NavLink>
 
+          {user && (
+            <NavLink
+              to="/resume-analyzer"
+              className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}
+            >
+              Resume Analyzer
+            </NavLink>
+          )}
+
           {user ? (
             <>
               {user.role === 'recruiter' ? (

@@ -197,7 +197,7 @@ const StatusBoard = ({ applications, onUpdate }) => {
                           const summary = getAiSummary(matchScore, skillScore, experienceScore, locationScore);
                           return (
                             <div className={`ai-summary ${matchScore > 70 ? 'ai-summary-green' :
-                                matchScore >= 40 ? 'ai-summary-amber' : 'ai-summary-red'
+                              matchScore >= 40 ? 'ai-summary-amber' : 'ai-summary-red'
                               }`}>
                               <span className="ai-summary-icon">{summary.icon}</span>
                               <span className="ai-summary-text">{summary.text}</span>
@@ -270,7 +270,7 @@ const StatusBoard = ({ applications, onUpdate }) => {
         }
         .column-header h4 {
           margin: 0;
-          font-size: 0.8rem;
+          font-size: 0.95rem;
           font-weight: 700;
           color: #475569;
           text-transform: uppercase;
@@ -284,7 +284,7 @@ const StatusBoard = ({ applications, onUpdate }) => {
           background: white;
           padding: 0.15rem 0.55rem;
           border-radius: 6px;
-          font-size: 0.7rem;
+          font-size: 0.85rem;
           font-weight: 700;
           color: #475569;
           border: 1px solid #e2e8f0;
@@ -297,11 +297,11 @@ const StatusBoard = ({ applications, onUpdate }) => {
         /* ── Card Styling ── */
         .app-mini-card {
           background: white;
-          padding: 0.9rem 1rem;
+          padding: 1rem 1.15rem;
           border-radius: 12px;
           margin-bottom: 0.75rem;
           box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.02);
-          font-size: 0.85rem;
+          font-size: 1rem;
           border: 1px solid #e2e8f0;
           transition: all 0.25s ease;
           position: relative;
@@ -353,9 +353,9 @@ const StatusBoard = ({ applications, onUpdate }) => {
           line-height: 1.3;
         }
         .candidate-email {
-          color: #94a3b8;
-          font-size: 0.7rem;
-          margin: 0 0 0.7rem 0;
+          color: #64748b;
+          font-size: 0.85rem;
+          margin: 0 0 0.8rem 0;
           line-height: 1.2;
         }
 
@@ -370,7 +370,7 @@ const StatusBoard = ({ applications, onUpdate }) => {
           margin-bottom: 0.3rem;
         }
         .match-label {
-          font-size: 0.68rem;
+          font-size: 0.9rem;
           font-weight: 600;
           color: #64748b;
           text-transform: uppercase;
@@ -380,7 +380,7 @@ const StatusBoard = ({ applications, onUpdate }) => {
           display: inline-block;
           padding: 0.2rem 0.65rem;
           border-radius: 8px;
-          font-size: 0.88rem;
+          font-size: 1rem;
           font-weight: 800;
           letter-spacing: 0.02em;
           box-shadow: 0 1px 4px rgba(0,0,0,0.06);
@@ -423,7 +423,7 @@ const StatusBoard = ({ applications, onUpdate }) => {
         }
         .breakdown-value {
           display: block;
-          font-size: 0.72rem;
+          font-size: 0.85rem;
           font-weight: 700;
           color: #334155;
         }
@@ -522,7 +522,7 @@ const StatusBoard = ({ applications, onUpdate }) => {
           line-height: 1.35;
         }
         .ai-summary-text {
-          font-size: 0.62rem;
+          font-size: 0.8rem;
           color: #475569;
           font-weight: 500;
         }

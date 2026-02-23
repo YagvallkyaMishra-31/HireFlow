@@ -15,40 +15,41 @@ const getMatchingCandidates = asyncHandler(async (req, res) => {
 
     const candidates = await User.find({ role: 'candidate' }).lean();
 
+    const sanitizeArray = (val) => {
+        if (Array.isArray(val)) return val.map(s => s.trim().toLowerCase());
+        if (typeof val === 'string') return val.split(',').map(s => s.trim().toLowerCase());
+        return [];
+    };
+
     const results = candidates.map(candidate => {
+        const requiredSkills = sanitizeArray(job.requiredSkills);
+        const candidateSkills = sanitizeArray(candidate.skills);
+        const requiredExp = Number(job.experienceRequired) || 0;
+        const candidateExp = Number(candidate.experienceYears) || 0;
+        const jobLocation = (job.location || 'Remote').trim().toLowerCase();
+        const candidateLocation = (candidate.location || 'Remote').trim().toLowerCase();
 
-        // 🧠 Skill Matching
-        const requiredSkills = job.requiredSkills || [];
-        const candidateSkills = candidate.skills || [];
+        // 1. Skill Match (60%)
+        let skillScore = 0;
+        if (requiredSkills.length > 0 && candidateSkills.length > 0) {
+            const overlap = requiredSkills.filter(skill => candidateSkills.includes(skill)).length;
+            skillScore = (overlap / requiredSkills.length) * 100;
+        }
 
-        const overlap = requiredSkills.filter(skill =>
-            candidateSkills.includes(skill)
-        ).length;
-
-        const skillScore = requiredSkills.length > 0
-            ? (overlap / requiredSkills.length) * 60
-            : 0;
-
-        // 🧠 Experience Matching
-        const requiredExp = job.experienceRequired || 0;
-        const candidateExp = candidate.experienceYears || 0;
-
+        // 2. Experience Match (30%)
         let experienceScore = 0;
-        if (requiredExp === 0) {
-            experienceScore = 30;
-        } else if (candidateExp >= requiredExp) {
-            experienceScore = 30;
-        } else {
-            experienceScore = (candidateExp / requiredExp) * 30;
+        if (requiredExp > 0) {
+            experienceScore = candidateExp >= requiredExp ? 100 : (candidateExp / requiredExp) * 100;
         }
 
-        // 🧠 Location Matching
-        let locationScore = 0;
-        if (job.location === 'Remote' || job.location === candidate.location) {
-            locationScore = 10;
-        }
+        // 3. Location Match (10%)
+        let locationScore = (jobLocation !== 'remote' && jobLocation === candidateLocation) ? 100 : 0;
 
-        const totalScore = Math.round(skillScore + experienceScore + locationScore);
+        const totalScore = Math.round(
+            (skillScore * 0.6) +
+            (experienceScore * 0.3) +
+            (locationScore * 0.1)
+        );
 
         return {
             candidateId: candidate._id,
@@ -57,7 +58,7 @@ const getMatchingCandidates = asyncHandler(async (req, res) => {
             score: totalScore,
             skillScore: Math.round(skillScore),
             experienceScore: Math.round(experienceScore),
-            locationScore
+            locationScore: Math.round(locationScore)
         };
     });
 

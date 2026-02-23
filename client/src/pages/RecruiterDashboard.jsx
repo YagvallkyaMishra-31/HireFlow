@@ -40,31 +40,15 @@ const RecruiterDashboard = () => {
 
         try {
             const appsRes = await api.get(`/applications/job/${jobId}`);
-            const matchRes = await api.get(`/match/job/${jobId}`);
-
             const applicationsData = appsRes.data.data;
-            const matchData = matchRes.data.data;
 
-            const enrichedApplications = applicationsData.map(app => {
-                const match = matchData.find(
-                    m => m.candidateId === app.candidate._id
-                );
-
-                return {
-                    ...app,
-                    matchScore: match?.score || 0,
-                    skillScore: match?.skillScore || 0,
-                    experienceScore: match?.experienceScore || 0,
-                    locationScore: match?.locationScore || 0
-                };
-            });
-
-            enrichedApplications.sort((a, b) => b.matchScore - a.matchScore);
+            // Applications already have scores from the backend
+            const enrichedApplications = applicationsData.sort((a, b) => b.matchScore - a.matchScore);
 
             setApplications(enrichedApplications);
 
         } catch (err) {
-            alert('Failed to fetch applications or match data');
+            alert('Failed to fetch applications');
         }
     };
 
@@ -175,7 +159,60 @@ const RecruiterDashboard = () => {
 
                 {/* RIGHT */}
                 <div className="right-panel">
-                    <div className="card">
+
+                    {/* AI Hiring Insights — computed from existing applications state */}
+                    {selectedJob && applications.length > 0 && (() => {
+                        const totalCandidates = applications.length;
+                        const avgMatch = Math.round(applications.reduce((sum, a) => sum + (a.matchScore || 0), 0) / totalCandidates);
+                        const strongMatches = applications.filter(a => (a.matchScore || 0) > 70).length;
+                        const rejectedCount = applications.filter(a => a.status === 'Rejected').length;
+                        const topCandidate = applications.reduce((best, a) => (a.matchScore || 0) > (best.matchScore || 0) ? a : best, applications[0]);
+
+                        return (
+                            <div className="card insights-card">
+                                <h3 className="insights-title">🤖 AI Hiring Insights</h3>
+                                <div className="insights-grid">
+                                    <div className="insight-item">
+                                        <span className="insight-icon">📊</span>
+                                        <div className="insight-data">
+                                            <span className="insight-value accent-blue">{avgMatch}%</span>
+                                            <span className="insight-label">Avg Match Score</span>
+                                        </div>
+                                    </div>
+                                    <div className="insight-item">
+                                        <span className="insight-icon">🏆</span>
+                                        <div className="insight-data">
+                                            <span className="insight-value accent-purple">{topCandidate.candidate?.name || '—'}</span>
+                                            <span className="insight-label">Top Candidate ({topCandidate.matchScore || 0}%)</span>
+                                        </div>
+                                    </div>
+                                    <div className="insight-item">
+                                        <span className="insight-icon">✅</span>
+                                        <div className="insight-data">
+                                            <span className="insight-value accent-green">{strongMatches}</span>
+                                            <span className="insight-label">Strong Matches (&gt;70%)</span>
+                                        </div>
+                                    </div>
+                                    <div className="insight-item">
+                                        <span className="insight-icon">👥</span>
+                                        <div className="insight-data">
+                                            <span className="insight-value accent-slate">{totalCandidates}</span>
+                                            <span className="insight-label">Total Candidates</span>
+                                        </div>
+                                    </div>
+                                    <div className="insight-item">
+                                        <span className="insight-icon">🚫</span>
+                                        <div className="insight-data">
+                                            <span className="insight-value accent-red">{rejectedCount}</span>
+                                            <span className="insight-label">Rejected</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
+
+                    <div className="card pipeline-card">
                         <h3>
                             Application Pipeline
                             {selectedJob && (
@@ -186,7 +223,10 @@ const RecruiterDashboard = () => {
                         {selectedJob ? (
                             <StatusBoard
                                 applications={applications}
-                                onUpdate={() => fetchApplications(selectedJob._id)}
+                                onUpdate={() => {
+                                    fetchApplications(selectedJob._id);
+                                    fetchData();
+                                }}
                             />
                         ) : (
                             <div className="empty-state">
@@ -201,23 +241,33 @@ const RecruiterDashboard = () => {
             {/* STYLES */}
             <style>{`
                 .dashboard-container {
-                    padding: 2rem;
-                    max-width: 1400px;
-                    margin: auto;
+                    max-width: 1440px;
+                    margin: 0 auto;
+                    padding-top: 0;
+                }
+
+                .dashboard-hero {
+                    margin-top: 0;
+                    margin-bottom: 1.5rem;
                 }
 
                 .dashboard-hero h1 {
-                    margin-bottom: 0.5rem;
+                    margin: 0 0 0.35rem 0;
+                    font-size: 1.65rem;
+                    font-weight: 800;
+                    color: #0f172a;
+                    letter-spacing: -0.01em;
                 }
 
                 .dashboard-hero p {
                     color: #64748b;
+                    margin: 0;
                 }
 
                 .stats-grid {
                     display: flex;
                     gap: 1rem;
-                    margin: 2rem 0;
+                    margin-bottom: 1.5rem;
                     flex-wrap: wrap;
                 }
 
@@ -226,7 +276,7 @@ const RecruiterDashboard = () => {
                     padding: 1.2rem 1.5rem;
                     border-radius: 14px;
                     border: 1px solid #e2e8f0;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+                    box-shadow: 0 1px 4px rgba(0,0,0,0.03);
                 }
 
                 .stat-card h2 {
@@ -241,8 +291,18 @@ const RecruiterDashboard = () => {
 
                 .dashboard-grid {
                     display: grid;
-                    grid-template-columns: 350px 1fr;
-                    gap: 2rem;
+                    grid-template-columns: 340px 1fr;
+                    gap: 1.5rem;
+                    align-items: start;
+                }
+
+                .left-panel > .card:last-child {
+                    margin-bottom: 0;
+                }
+
+                .right-panel > .card:last-child,
+                .right-panel > .insights-card:last-of-type {
+                    margin-bottom: 0;
                 }
 
                 .card {
@@ -251,7 +311,18 @@ const RecruiterDashboard = () => {
                     border-radius: 16px;
                     border: 1px solid #e2e8f0;
                     box-shadow: 0 4px 20px rgba(0,0,0,0.04);
-                    margin-bottom: 1.5rem;
+                    margin-bottom: 1.25rem;
+                }
+
+                .card h3 {
+                    font-size: 1.25rem;
+                    font-weight: 700;
+                    color: #1e293b;
+                    margin: 0 0 1rem 0;
+                }
+
+                .card.pipeline-card {
+                    overflow-x: auto;
                 }
 
                 .modern-form {
@@ -335,6 +406,75 @@ const RecruiterDashboard = () => {
                     color: #94a3b8;
                 }
 
+                /* ── AI Hiring Insights ── */
+                .insights-card {
+                    background: linear-gradient(135deg, #faf5ff 0%, #eff6ff 50%, #f0fdf4 100%);
+                    border: 1px solid #e2e8f0;
+                    padding: 1.5rem;
+                    margin-bottom: 1.25rem;
+                    box-shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 6px rgba(0,0,0,0.03);
+                }
+                .insights-title {
+                    font-size: 1.25rem;
+                    font-weight: 700;
+                    color: #1e293b;
+                    margin: 0 0 1.25rem 0;
+                }
+                .insights-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+                    gap: 0.75rem;
+                }
+                .insight-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.6rem;
+                    background: rgba(255,255,255,0.85);
+                    backdrop-filter: blur(4px);
+                    padding: 0.7rem 0.85rem;
+                    border-radius: 12px;
+                    border: 1px solid #f1f5f9;
+                    transition: box-shadow 0.2s, transform 0.2s;
+                }
+                .insight-item:hover {
+                    box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+                    transform: translateY(-1px);
+                }
+                .insight-icon {
+                    font-size: 1.3rem;
+                    flex-shrink: 0;
+                }
+                .insight-data {
+                    display: flex;
+                    flex-direction: column;
+                    min-width: 0;
+                }
+                .insight-value {
+                    font-size: 1.2rem;
+                    font-weight: 700;
+                    line-height: 1.3;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+                .insight-label {
+                    font-size: 0.85rem;
+                    color: #64748b;
+                    font-weight: 500;
+                    white-space: nowrap;
+                }
+                .accent-blue   { color: #2563eb; }
+                .accent-purple { color: #7c3aed; }
+                .accent-green  { color: #059669; }
+                .accent-slate  { color: #334155; }
+                .accent-red    { color: #dc2626; }
+
+                @media (max-width: 1024px) {
+                    .dashboard-grid {
+                        grid-template-columns: 300px 1fr;
+                    }
+                }
+
                 @media (max-width: 900px) {
                     .dashboard-grid {
                         grid-template-columns: 1fr;
@@ -342,6 +482,10 @@ const RecruiterDashboard = () => {
 
                     .form-row {
                         grid-template-columns: 1fr;
+                    }
+
+                    .insights-grid {
+                        grid-template-columns: repeat(2, 1fr);
                     }
                 }
             `}</style>

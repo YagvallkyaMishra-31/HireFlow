@@ -71,14 +71,39 @@ const JobDetails = () => {
 
             {isCandidate && (
                 <div className="application-section">
-                    <button
-                        onClick={handleApply}
-                        disabled={applied}
-                        style={{ width: 'auto', padding: '0.75rem 2rem', fontSize: '1rem' }}
-                        className={applied ? 'btn-success' : 'btn-primary'}
-                    >
-                        {applied ? '✓ Application Sent' : 'Apply for this Position'}
-                    </button>
+                    <div className="action-buttons" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                        <button
+                            onClick={handleApply}
+                            disabled={applied}
+                            style={{ width: 'auto', padding: '0.75rem 2rem', fontSize: '1rem' }}
+                            className={applied ? 'btn-success' : 'btn-primary'}
+                        >
+                            {applied ? '✓ Application Sent' : 'Apply for this Position'}
+                        </button>
+
+                        <button
+                            onClick={() => navigate('/resume-analyzer', {
+                                state: {
+                                    jobDescription: job.description,
+                                    jobTitle: job.title,
+                                    jobId: job._id
+                                }
+                            })}
+                            style={{
+                                width: 'auto',
+                                padding: '0.75rem 2rem',
+                                fontSize: '1rem',
+                                backgroundColor: '#f0f9ff',
+                                color: '#0369a1',
+                                border: '1px solid #bae6fd',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem'
+                            }}
+                        >
+                            ✨ Analyze My Resume For This Job
+                        </button>
+                    </div>
                     {success && <p className="success-txt">{success}</p>}
                 </div>
             )}
