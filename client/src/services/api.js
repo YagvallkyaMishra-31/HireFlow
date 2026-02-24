@@ -27,7 +27,10 @@ api.interceptors.response.use(
             localStorage.removeItem('user');
             // Redirect to login if not already there
             if (window.location.pathname !== '/login') {
-                window.location.href = '/login';
+                // Rely on AuthContext/ProtectedRoute for redirection after logout
+                // Or use window.history.pushState as a soft navigation
+                window.history.pushState({}, '', '/login');
+                window.dispatchEvent(new PopStateEvent('popstate'));
             }
         }
         return Promise.reject(error);
