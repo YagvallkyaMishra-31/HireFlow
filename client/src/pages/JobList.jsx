@@ -15,7 +15,7 @@ const JobList = () => {
   const [company, setCompany] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [limit] = useState(5);
+  const [limit] = useState(6);
 
   const fetchJobs = useCallback(async () => {
     setLoading(true);
@@ -195,8 +195,15 @@ const JobList = () => {
       </div>
 
       <style>{`
+        /* Override parent app-container for full-width */
+        .app-container {
+            max-width: none !important;
+            padding: 0 !important;
+        }
         .job-list-page {
           width: 100%;
+          padding: 24px 48px;
+          box-sizing: border-box;
           display: flex;
           flex-direction: column;
           gap: 1.75rem;
@@ -310,14 +317,17 @@ const JobList = () => {
 
         .jobs-grid {
           display: grid;
-          grid-template-columns: repeat(2, 1fr);
+          grid-template-columns: repeat(3, 1fr);
           gap: 1.25rem;
         }
         .jobs-grid.centered-single {
           grid-template-columns: 1fr;
           max-width: 520px;
         }
-        @media (max-width: 768px) {
+        @media (max-width: 1024px) {
+          .jobs-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 640px) {
           .jobs-grid { grid-template-columns: 1fr; }
         }
 

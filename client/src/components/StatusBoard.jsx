@@ -12,7 +12,6 @@ const STATUS_COLUMNS = [
   'Rejected'
 ];
 
-// Mirror of backend STATUS_TRANSITIONS — only valid next states shown
 const STATUS_TRANSITIONS = {
   'Applied': ['Screening', 'Rejected'],
   'Screening': ['Interview', 'Rejected'],
@@ -42,35 +41,6 @@ const getScoreTrackColor = (score) => {
   return '#f87171';
 };
 
-const getAiSummary = (matchScore, skillScore, experienceScore, locationScore) => {
-  let base;
-  let icon;
-  if (matchScore > 70) {
-    base = 'Strong alignment with job requirements. Skills and experience closely match.';
-    icon = '⭐';
-  } else if (matchScore >= 40) {
-    base = 'Moderate alignment. Some skill or experience gaps detected.';
-    icon = '⚖️';
-  } else {
-    base = 'Limited alignment. Candidate may not fully meet job requirements.';
-    icon = '⚠️';
-  }
-
-  const details = [];
-  const scores = { skill: skillScore, experience: experienceScore, location: locationScore };
-  const highest = Object.entries(scores).reduce((a, b) => b[1] > a[1] ? b : a);
-  if (highest[1] > 0) {
-    if (highest[0] === 'skill') details.push('Strong skill match.');
-    else if (highest[0] === 'experience') details.push('Solid experience fit.');
-    else details.push('Good location match.');
-  }
-  if (locationScore < 40 && locationScore < skillScore && locationScore < experienceScore) {
-    details.push('Location gap noted.');
-  }
-
-  return { icon, text: base + (details.length ? ' ' + details.join(' ') : '') };
-};
-
 const StatusBoard = ({ applications, onUpdate }) => {
   const [updatingId, setUpdatingId] = useState(null);
 
@@ -79,7 +49,7 @@ const StatusBoard = ({ applications, onUpdate }) => {
     try {
       const response = await api.patch(`/applications/${appId}`, { status: newStatus });
       if (response.data.success) {
-        onUpdate(); // Trigger refresh in parent
+        onUpdate();
       }
     } catch (error) {
       alert(error.response?.data?.message || 'Failed to update status');
@@ -88,7 +58,6 @@ const StatusBoard = ({ applications, onUpdate }) => {
     }
   };
 
-  // Pre-compute top match candidate per column
   const topMatchByColumn = {};
   STATUS_COLUMNS.forEach(column => {
     const columnApps = applications.filter(app => app.status === column);
@@ -96,9 +65,7 @@ const StatusBoard = ({ applications, onUpdate }) => {
       const top = columnApps.reduce((best, app) =>
         (app.matchScore || 0) > (best.matchScore || 0) ? app : best
         , columnApps[0]);
-      if ((top.matchScore || 0) > 0) {
-        topMatchByColumn[column] = top._id;
-      }
+      if ((top.matchScore || 0) > 0) topMatchByColumn[column] = top._id;
     }
   });
 
@@ -117,7 +84,7 @@ const StatusBoard = ({ applications, onUpdate }) => {
               </div>
 
               <div className="column-content">
-                <div className="ai-sort-label">🤖 Sorted by AI Match Score</div>
+                <div className="ai-rank-label">🤖 AI Ranked</div>
                 {columnApps.length > 0 ? (
                   columnApps.map(app => {
                     const validNextStatuses = STATUS_TRANSITIONS[app.status] || [];
@@ -134,96 +101,41 @@ const StatusBoard = ({ applications, onUpdate }) => {
                         key={app._id}
                         className={`app-mini-card ${updatingId === app._id ? 'updating' : ''} ${isTopMatch ? 'top-match-card' : ''} ${isAiRecommended ? 'ai-recommended' : ''}`}
                       >
-                        {/* AI Recommended Ribbon */}
-                        {isAiRecommended && (
-                          <div className="ai-ribbon">
-                            <span>✅ AI Recommended</span>
-                          </div>
-                        )}
+                        {isAiRecommended && <div className="ai-status">✨ Recommended</div>}
+                        {isTopMatch && <div className="top-match-status">⭐ Top Choice</div>}
 
-                        {/* Top Match Badge */}
-                        {isTopMatch && (
-                          <div className="top-match-badge">
-                            <span>⭐ Top Match</span>
-                          </div>
-                        )}
-
-                        <p className="candidate-name"><strong>{app.candidate?.name}</strong></p>
+                        <p className="candidate-name">{app.candidate?.name}</p>
                         <p className="candidate-email">{app.candidate?.email}</p>
 
-                        {/* Match Score Badge + Progress Bar */}
-                        <div className="score-section">
-                          <div className="match-score-row">
-                            <span className="match-label">Match</span>
-                            <span
-                              className="match-badge"
-                              style={{
-                                color: getScoreColor(matchScore),
-                                background: getScoreBg(matchScore)
-                              }}
-                            >
-                              {matchScore}%
-                            </span>
-                          </div>
-                          <div className="progress-track">
-                            <div
-                              className="progress-fill"
-                              style={{
-                                width: `${Math.min(matchScore, 100)}%`,
-                                background: getScoreTrackColor(matchScore)
-                              }}
-                            />
-                          </div>
+                        <div className="score-row">
+                          <span className="score-pill" style={{ color: getScoreColor(matchScore), background: getScoreBg(matchScore) }}>
+                            {matchScore}% Match
+                          </span>
                         </div>
 
-                        {/* Score Breakdown */}
-                        <div className="score-breakdown">
-                          <div className="breakdown-item">
-                            <span className="breakdown-label">Skill</span>
-                            <span className="breakdown-value">{skillScore}%</span>
-                          </div>
-                          <div className="breakdown-item">
-                            <span className="breakdown-label">Exp</span>
-                            <span className="breakdown-value">{experienceScore}%</span>
-                          </div>
-                          <div className="breakdown-item">
-                            <span className="breakdown-label">Loc</span>
-                            <span className="breakdown-value">{locationScore}%</span>
-                          </div>
+                        <div className="score-bar-track">
+                          <div className="score-bar-fill" style={{ width: `${matchScore}%`, background: getScoreTrackColor(matchScore) }}></div>
                         </div>
 
-                        {/* AI Recommendation Summary */}
-                        {(() => {
-                          const summary = getAiSummary(matchScore, skillScore, experienceScore, locationScore);
-                          return (
-                            <div className={`ai-summary ${matchScore > 70 ? 'ai-summary-green' :
-                              matchScore >= 40 ? 'ai-summary-amber' : 'ai-summary-red'
-                              }`}>
-                              <span className="ai-summary-icon">{summary.icon}</span>
-                              <span className="ai-summary-text">{summary.text}</span>
-                            </div>
-                          );
-                        })()}
+                        <div className="breakdown-metrics">
+                          <div className="metric"><span>Skills</span>{skillScore}%</div>
+                          <div className="metric"><span>Exp</span>{experienceScore}%</div>
+                          <div className="metric"><span>Loc</span>{locationScore}%</div>
+                        </div>
 
                         {!isFinal ? (
-                          <div className="status-selector">
+                          <div className="move-action">
                             <select
                               value=""
-                              onChange={(e) => {
-                                if (e.target.value) {
-                                  handleStatusChange(app._id, e.target.value);
-                                }
-                              }}
+                              onChange={(e) => e.target.value && handleStatusChange(app._id, e.target.value)}
                               disabled={updatingId === app._id}
                             >
-                              <option value="" disabled>Move to...</option>
-                              {validNextStatuses.map(s => (
-                                <option key={s} value={s}>{s}</option>
-                              ))}
+                              <option value="" disabled>Change Status</option>
+                              {validNextStatuses.map(s => <option key={s} value={s}>{s}</option>)}
                             </select>
                           </div>
                         ) : (
-                          <span className={`final-badge ${column === 'Hired' ? 'badge-hired' : 'badge-rejected'}`}>
+                          <span className={`final-status ${column === 'Hired' ? 'hired' : 'rejected'}`}>
                             {column === 'Hired' ? '✓ Hired' : '✗ Rejected'}
                           </span>
                         )}
@@ -231,7 +143,7 @@ const StatusBoard = ({ applications, onUpdate }) => {
                     );
                   })
                 ) : (
-                  <p className="empty-col">No candidates</p>
+                  <p className="empty-msg">No candidates</p>
                 )}
               </div>
             </div>
@@ -241,299 +153,75 @@ const StatusBoard = ({ applications, onUpdate }) => {
 
       <style>{`
         .status-board-container {
-          overflow-x: auto;
-          padding-bottom: 2rem;
-          margin-top: 1.5rem;
+          width: max-content;
         }
+
         .status-columns {
           display: flex;
-          gap: 1rem;
-          min-width: 1200px;
+          gap: 16px;
         }
         .status-column {
-          flex: 1;
-          background-color: #f8fafc;
-          border-radius: 14px;
-          min-height: 400px;
+          min-width: 300px;
+          flex-shrink: 0;
+          background: #f8fafc;
+          border-radius: 12px;
+          min-height: 500px;
           display: flex;
           flex-direction: column;
           border: 1px solid #e2e8f0;
         }
+
         .column-header {
-          padding: 0.85rem 1rem;
-          background: #f1f5f9;
-          border-radius: 14px 14px 0 0;
+          padding: 12px;
+          background: white;
+          border-radius: 12px 12px 0 0;
           display: flex;
           justify-content: space-between;
           align-items: center;
           border-bottom: 1px solid #e2e8f0;
         }
-        .column-header h4 {
-          margin: 0;
-          font-size: 0.95rem;
-          font-weight: 700;
-          color: #475569;
-          text-transform: uppercase;
-          letter-spacing: 0.03em;
-        }
-        .hired-header { background: #ecfdf5; border-bottom-color: #bbf7d0; }
-        .hired-header h4 { color: #059669; }
-        .rejected-header { background: #fef2f2; border-bottom-color: #fecaca; }
-        .rejected-header h4 { color: #dc2626; }
-        .count-badge {
-          background: white;
-          padding: 0.15rem 0.55rem;
-          border-radius: 6px;
-          font-size: 0.85rem;
-          font-weight: 700;
-          color: #475569;
-          border: 1px solid #e2e8f0;
-        }
-        .column-content {
-          padding: 0.75rem;
-          flex: 1;
-        }
+        .column-header h4 { margin: 0; font-size: 0.85rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+        .hired-header { background: #f0fdf4; border-bottom-color: #dcfce7; }
+        .rejected-header { background: #fef2f2; border-bottom-color: #fee2e2; }
 
-        /* ── Card Styling ── */
+        .count-badge { background: #f1f5f9; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; color: #475569; }
+
+        .column-content { padding: 12px; flex: 1; display: flex; flex-direction: column; gap: 12px; }
+        .ai-rank-label { text-align: center; font-size: 0.65rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; }
+
         .app-mini-card {
           background: white;
-          padding: 1rem 1.15rem;
-          border-radius: 12px;
-          margin-bottom: 0.75rem;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.02);
-          font-size: 1rem;
+          padding: 12px;
+          border-radius: 10px;
           border: 1px solid #e2e8f0;
-          transition: all 0.25s ease;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.04);
           position: relative;
+          transition: 0.2s;
         }
-        .app-mini-card:hover {
-          box-shadow: 0 4px 16px rgba(37,99,235,0.10), 0 1px 4px rgba(0,0,0,0.06);
-          border-color: #93c5fd;
-          transform: translateY(-2px);
-        }
-        .app-mini-card.updating {
-          opacity: 0.5;
-          pointer-events: none;
-        }
+        .app-mini-card:hover { border-color: #2563eb; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
 
-        /* ── Top Match Highlight ── */
-        .top-match-card {
-          border-color: #a78bfa;
-          box-shadow: 0 0 0 1px rgba(139,92,246,0.15), 0 2px 10px rgba(139,92,246,0.08);
-          background: linear-gradient(135deg, #faf5ff 0%, #ffffff 40%);
-        }
-        .top-match-card:hover {
-          border-color: #8b5cf6;
-          box-shadow: 0 0 0 1px rgba(139,92,246,0.25), 0 4px 16px rgba(139,92,246,0.12);
-        }
-        .top-match-badge {
-          position: absolute;
-          top: -8px;
-          right: 8px;
-          z-index: 1;
-        }
-        .top-match-badge span {
-          display: inline-block;
-          background: linear-gradient(135deg, #8b5cf6, #a78bfa);
-          color: white;
-          font-size: 0.62rem;
-          font-weight: 700;
-          padding: 0.18rem 0.55rem;
-          border-radius: 6px;
-          letter-spacing: 0.02em;
-          box-shadow: 0 2px 6px rgba(139,92,246,0.25);
-          text-transform: uppercase;
-        }
+        .ai-status, .top-match-status { font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; margin-bottom: 8px; display: inline-block; text-transform: uppercase; }
+        .ai-status { background: #ecfdf5; color: #059669; border: 1px solid #34d399; }
+        .top-match-status { background: #f5f3ff; color: #7c3aed; border: 1px solid #a78bfa; margin-left: 4px; }
 
-        /* ── Candidate Info ── */
-        .candidate-name {
-          margin: 0 0 0.15rem 0;
-          font-size: 0.85rem;
-          color: #1e293b;
-          line-height: 1.3;
-        }
-        .candidate-email {
-          color: #64748b;
-          font-size: 0.85rem;
-          margin: 0 0 0.8rem 0;
-          line-height: 1.2;
-        }
+        .candidate-name { margin: 0; font-size: 0.95rem; font-weight: 800; color: #1e293b; }
+        .candidate-email { font-size: 0.8rem; color: #64748b; margin: 4px 0 16px 0; word-break: break-all; opacity: 0.8; }
 
-        /* ── Match Score Section ── */
-        .score-section {
-          margin-bottom: 0.55rem;
-        }
-        .match-score-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 0.3rem;
-        }
-        .match-label {
-          font-size: 0.9rem;
-          font-weight: 600;
-          color: #64748b;
-          text-transform: uppercase;
-          letter-spacing: 0.04em;
-        }
-        .match-badge {
-          display: inline-block;
-          padding: 0.2rem 0.65rem;
-          border-radius: 8px;
-          font-size: 1rem;
-          font-weight: 800;
-          letter-spacing: 0.02em;
-          box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-        }
-        .progress-track {
-          width: 100%;
-          height: 4px;
-          background: #f1f5f9;
-          border-radius: 4px;
-          overflow: hidden;
-        }
-        .progress-fill {
-          height: 100%;
-          border-radius: 4px;
-          transition: width 0.4s ease;
-        }
+        .score-pill { padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; }
+        .score-bar-track { height: 6px; background: #f1f5f9; border-radius: 10px; margin: 12px 0; overflow: hidden; }
+        .score-bar-fill { height: 100%; border-radius: 10px; transition: 0.3s; }
 
-        /* ── Score Breakdown ── */
-        .score-breakdown {
-          display: flex;
-          gap: 0.35rem;
-          margin-bottom: 0.65rem;
-        }
-        .breakdown-item {
-          flex: 1;
-          background: #f8fafc;
-          border: 1px solid #f1f5f9;
-          border-radius: 6px;
-          padding: 0.3rem 0.25rem;
-          text-align: center;
-        }
-        .breakdown-label {
-          display: block;
-          font-size: 0.58rem;
-          font-weight: 600;
-          color: #94a3b8;
-          text-transform: uppercase;
-          letter-spacing: 0.04em;
-          margin-bottom: 0.1rem;
-        }
-        .breakdown-value {
-          display: block;
-          font-size: 0.85rem;
-          font-weight: 700;
-          color: #334155;
-        }
+        .breakdown-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+        .metric { background: #f8fafc; padding: 6px; border-radius: 8px; font-size: 0.7rem; font-weight: 800; text-align: center; border: 1px solid #f1f5f9; }
+        .metric span { display: block; font-size: 0.55rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 2px; }
 
-        /* ── Status Selector ── */
-        .status-selector select {
-          width: 100%;
-          padding: 0.35rem 0.5rem;
-          border: 1px solid #cbd5e1;
-          border-radius: 8px;
-          font-size: 0.78rem;
-          font-weight: 600;
-          background-color: #f8fafc;
-          color: #2563eb;
-          cursor: pointer;
-          transition: border-color 0.2s;
-        }
-        .status-selector select:hover {
-          border-color: #93c5fd;
-        }
+        .move-action select { width: 100%; padding: 8px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.75rem; font-weight: 800; background: #f8fafc; color: #2563eb; cursor: pointer; }
 
-        /* ── Final Badge ── */
-        .final-badge {
-          display: inline-block;
-          padding: 0.25rem 0.65rem;
-          border-radius: 6px;
-          font-size: 0.72rem;
-          font-weight: 700;
-        }
-        .badge-hired { background: #ecfdf5; color: #059669; }
-        .badge-rejected { background: #fef2f2; color: #dc2626; }
+        .final-status { display: block; text-align: center; padding: 8px; border-radius: 8px; font-size: 0.8rem; font-weight: 800; }
+        .final-status.hired { background: #dcfce7; color: #166534; }
+        .final-status.rejected { background: #fee2e2; color: #991b1b; }
 
-        /* ── AI Sort Label ── */
-        .ai-sort-label {
-          text-align: center;
-          font-size: 0.62rem;
-          font-weight: 600;
-          color: #94a3b8;
-          text-transform: uppercase;
-          letter-spacing: 0.04em;
-          padding: 0.35rem 0 0.5rem;
-          border-bottom: 1px dashed #e2e8f0;
-          margin-bottom: 0.65rem;
-        }
-
-        /* ── AI Recommended Card ── */
-        .ai-recommended {
-          border-top: 3px solid #34d399;
-          background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 20%);
-        }
-        .ai-recommended:hover {
-          border-color: #34d399;
-          border-top-color: #10b981;
-        }
-        .ai-ribbon {
-          margin-bottom: 0.45rem;
-        }
-        .ai-ribbon span {
-          display: inline-block;
-          background: linear-gradient(135deg, #059669, #34d399);
-          color: white;
-          font-size: 0.6rem;
-          font-weight: 700;
-          padding: 0.15rem 0.55rem;
-          border-radius: 5px;
-          letter-spacing: 0.03em;
-          text-transform: uppercase;
-          box-shadow: 0 2px 6px rgba(5,150,105,0.2);
-        }
-
-        /* ── AI Summary ── */
-        .ai-summary {
-          display: flex;
-          align-items: flex-start;
-          gap: 0.4rem;
-          padding: 0.5rem 0.6rem;
-          border-radius: 8px;
-          margin-bottom: 0.65rem;
-          line-height: 1.35;
-        }
-        .ai-summary-green {
-          background: #f0fdf4;
-          border: 1px solid #dcfce7;
-        }
-        .ai-summary-amber {
-          background: #fffbeb;
-          border: 1px solid #fef3c7;
-        }
-        .ai-summary-red {
-          background: #fef2f2;
-          border: 1px solid #fecaca;
-        }
-        .ai-summary-icon {
-          flex-shrink: 0;
-          font-size: 0.72rem;
-          line-height: 1.35;
-        }
-        .ai-summary-text {
-          font-size: 0.8rem;
-          color: #475569;
-          font-weight: 500;
-        }
-
-        /* ── Empty State ── */
-        .empty-col {
-          text-align: center;
-          color: #94a3b8;
-          font-size: 0.78rem;
-          margin-top: 2rem;
-        }
+        .empty-msg { text-align: center; color: #94a3b8; font-size: 0.85rem; padding: 2rem 0; font-weight: 600; }
       `}</style>
     </div>
   );

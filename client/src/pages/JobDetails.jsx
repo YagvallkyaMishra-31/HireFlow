@@ -115,14 +115,27 @@ const JobDetails = () => {
             )}
 
             <style>{`
+        /* Override parent app-container for full-width */
+        .app-container {
+            max-width: none !important;
+            padding: 0 !important;
+        }
+        .page {
+            width: 100%;
+            padding: 32px 48px;
+            box-sizing: border-box;
+        }
         .job-details-header h1 {
           margin-bottom: 0.5rem;
-          color: var(--text-color);
+          color: #0f172a;
+          font-size: 2rem;
+          font-weight: 800;
+          letter-spacing: -0.02em;
         }
         .job-company {
           font-size: 1.25rem;
-          color: var(--primary-color);
-          font-weight: 600;
+          color: #2563eb;
+          font-weight: 700;
           display: block;
           margin-bottom: 1.5rem;
         }
@@ -130,20 +143,29 @@ const JobDetails = () => {
           display: flex;
           gap: 2rem;
           margin-bottom: 2rem;
-          padding: 1rem;
+          padding: 1.25rem;
           background: #f8fafc;
-          border-radius: 4px;
-          font-size: 0.9rem;
+          border-radius: 14px;
+          font-size: 0.95rem;
+          border: 1px solid #e2e8f0;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .job-meta-details strong {
+          color: #334155;
         }
         .job-content {
           margin-bottom: 2rem;
           line-height: 1.8;
           color: #334155;
+          font-size: 1rem;
         }
         .job-content h3 {
           margin-bottom: 1rem;
           border-bottom: 2px solid #e2e8f0;
           padding-bottom: 0.5rem;
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: #0f172a;
         }
         .application-section {
           margin-top: 2rem;
@@ -151,15 +173,43 @@ const JobDetails = () => {
           padding-top: 2rem;
           width: 100%;
         }
+        .btn-primary {
+          background: linear-gradient(135deg, #2563eb, #3b82f6) !important;
+          color: white !important;
+          border: none !important;
+          font-weight: 700 !important;
+          border-radius: 12px !important;
+          box-shadow: 0 4px 12px rgba(37,99,235,0.25);
+          transition: all 0.2s !important;
+        }
+        .btn-primary:hover {
+          background: linear-gradient(135deg, #1d4ed8, #2563eb) !important;
+          transform: translateY(-1px);
+          box-shadow: 0 6px 20px rgba(37,99,235,0.35);
+        }
+        .btn-success {
+          background: linear-gradient(135deg, #059669, #10b981) !important;
+          color: white !important;
+          border: none !important;
+          font-weight: 700 !important;
+          border-radius: 12px !important;
+          box-shadow: 0 4px 12px rgba(5,150,105,0.25);
+        }
         .success-txt {
           color: #16a34a;
           margin-top: 1rem;
-          font-weight: 500;
+          font-weight: 600;
+          font-size: 0.95rem;
         }
         .login-prompt {
           margin-top: 2rem;
           font-style: italic;
-          color: var(--secondary-color);
+          color: #64748b;
+          font-size: 0.95rem;
+        }
+        .login-prompt a {
+          color: #2563eb;
+          font-weight: 700;
         }
       `}</style>
         </div>

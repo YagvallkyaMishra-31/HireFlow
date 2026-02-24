@@ -41,12 +41,8 @@ const RecruiterDashboard = () => {
         try {
             const appsRes = await api.get(`/applications/job/${jobId}`);
             const applicationsData = appsRes.data.data;
-
-            // Applications already have scores from the backend
             const enrichedApplications = applicationsData.sort((a, b) => b.matchScore - a.matchScore);
-
             setApplications(enrichedApplications);
-
         } catch (err) {
             alert('Failed to fetch applications');
         }
@@ -74,93 +70,101 @@ const RecruiterDashboard = () => {
 
     return (
         <div className="dashboard-container">
+            {/* GLOBAL CSS OVERRIDES */}
+            <style dangerouslySetInnerHTML={{
+                __html: `
+                html, body { 
+                    overflow-x: hidden !important; 
+                    margin: 0; 
+                    padding: 0;
+                    width: 100%;
+                }
+            ` }} />
 
-            {/* HERO */}
-            <div className="dashboard-hero">
-                <h1>Recruiter Dashboard</h1>
-                <p>Welcome back, <strong>{user.name}</strong> — manage your AI hiring pipeline</p>
-            </div>
-
-            {/* STATS */}
-            <div className="stats-grid">
-                <div className="stat-card">
-                    <h2>{stats.totalJobs}</h2>
-                    <span>Active Jobs</span>
+            <div className="dashboard-header">
+                <div className="header-content">
+                    <h1 className="dashboard-title">Recruiter Dashboard</h1>
+                    <p className="subtitle">Welcome back, <strong>{user.name}</strong> — manage your AI hiring pipeline</p>
                 </div>
-                <div className="stat-card">
-                    <h2>{stats.totalApplications}</h2>
-                    <span>Total Applications</span>
-                </div>
-                {stats.applicationsByStatus.map(s => (
-                    <div key={s.status} className="stat-card mini">
-                        <h3>{s.count}</h3>
-                        <span>{s.status}</span>
+                <div className="stats-header">
+                    <div className="stat-pill blue">
+                        <span className="pill-val">{stats.totalJobs}</span>
+                        <span className="pill-label">Active Jobs</span>
                     </div>
-                ))}
+                    <div className="stat-pill purple">
+                        <span className="pill-val">{stats.totalApplications}</span>
+                        <span className="pill-label">Total Applications</span>
+                    </div>
+                </div>
             </div>
 
             <div className="dashboard-grid">
-
-                {/* LEFT */}
+                {/* SIDEBAR (360px) */}
                 <div className="left-panel">
-
-                    <div className="card">
-                        <h3>Post New Job</h3>
-
+                    <div className="card side-card">
+                        <div className="card-header">
+                            <h3>Post New Job</h3>
+                        </div>
                         <form onSubmit={handleCreateJob} className="modern-form">
-                            <div className="form-row">
+                            <div className="form-group">
+                                <label>Job Title</label>
                                 <input
                                     type="text"
-                                    placeholder="Job Title"
+                                    placeholder="e.g. Senior React Developer"
                                     value={jobForm.title}
                                     onChange={e => setJobForm({ ...jobForm, title: e.target.value })}
                                     required
                                 />
+                            </div>
+                            <div className="form-group">
+                                <label>Company</label>
                                 <input
                                     type="text"
-                                    placeholder="Company"
+                                    placeholder="Company Name"
                                     value={jobForm.company}
                                     onChange={e => setJobForm({ ...jobForm, company: e.target.value })}
                                     required
                                 />
                             </div>
-
-                            <textarea
-                                placeholder="Describe role, required skills, experience..."
-                                value={jobForm.description}
-                                onChange={e => setJobForm({ ...jobForm, description: e.target.value })}
-                                required
-                            />
-
-                            <button type="submit" disabled={creating}>
+                            <div className="form-group">
+                                <label>Job Description</label>
+                                <textarea
+                                    placeholder="Describe role, required skills, experience..."
+                                    value={jobForm.description}
+                                    onChange={e => setJobForm({ ...jobForm, description: e.target.value })}
+                                    required
+                                />
+                            </div>
+                            <button type="submit" className="primary-btn" disabled={creating}>
                                 {creating ? 'Posting...' : 'Post Job →'}
                             </button>
                         </form>
                     </div>
 
-                    <div className="card">
-                        <h3>Your Jobs ({myJobs.length})</h3>
-
-                        {myJobs.map(job => (
-                            <div
-                                key={job._id}
-                                className={`job-item ${selectedJob?._id === job._id ? 'active' : ''}`}
-                                onClick={() => fetchApplications(job._id)}
-                            >
-                                <div>
-                                    <strong>{job.title}</strong>
-                                    <span>{job.company}</span>
+                    <div className="card side-card">
+                        <div className="card-header">
+                            <h3>Your Jobs ({myJobs.length})</h3>
+                        </div>
+                        <div className="job-list-compact">
+                            {myJobs.map(job => (
+                                <div
+                                    key={job._id}
+                                    className={`job-item-mini ${selectedJob?._id === job._id ? 'active' : ''}`}
+                                    onClick={() => fetchApplications(job._id)}
+                                >
+                                    <div className="job-info">
+                                        <span className="jt">{job.title}</span>
+                                        <span className="jc">{job.company}</span>
+                                    </div>
+                                    {selectedJob?._id === job._id && <div className="active-dot" />}
                                 </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
                     </div>
-
                 </div>
 
-                {/* RIGHT */}
+                {/* MAIN CONTENT (Flexible) */}
                 <div className="right-panel">
-
-                    {/* AI Hiring Insights — computed from existing applications state */}
                     {selectedJob && applications.length > 0 && (() => {
                         const totalCandidates = applications.length;
                         const avgMatch = Math.round(applications.reduce((sum, a) => sum + (a.matchScore || 0), 0) / totalCandidates);
@@ -169,42 +173,46 @@ const RecruiterDashboard = () => {
                         const topCandidate = applications.reduce((best, a) => (a.matchScore || 0) > (best.matchScore || 0) ? a : best, applications[0]);
 
                         return (
-                            <div className="card insights-card">
-                                <h3 className="insights-title">🤖 AI Hiring Insights</h3>
-                                <div className="insights-grid">
-                                    <div className="insight-item">
-                                        <span className="insight-icon">📊</span>
-                                        <div className="insight-data">
-                                            <span className="insight-value accent-blue">{avgMatch}%</span>
-                                            <span className="insight-label">Avg Match Score</span>
+                            <div className="insights-premium-card">
+                                <div className="insights-header">
+                                    <span className="sparkle">✨</span>
+                                    <h3>AI Hiring Insights</h3>
+                                    <div className="job-badge">{selectedJob.title}</div>
+                                </div>
+                                <div className="insights-row">
+                                    <div className="insight-box">
+                                        <div className="box-icon blue">📊</div>
+                                        <div className="box-content">
+                                            <span className="box-val">{avgMatch}%</span>
+                                            <span className="box-label">Avg Match</span>
                                         </div>
                                     </div>
-                                    <div className="insight-item">
-                                        <span className="insight-icon">🏆</span>
-                                        <div className="insight-data">
-                                            <span className="insight-value accent-purple">{topCandidate.candidate?.name || '—'}</span>
-                                            <span className="insight-label">Top Candidate ({topCandidate.matchScore || 0}%)</span>
+                                    <div className="insight-box">
+                                        <div className="box-icon purple">🏆</div>
+                                        <div className="box-content">
+                                            <span className="box-val truncate">{topCandidate.candidate?.name?.split(' ')[0] || '—'}</span>
+                                            <span className="box-label">Top Pick ({topCandidate.matchScore}%)</span>
                                         </div>
                                     </div>
-                                    <div className="insight-item">
-                                        <span className="insight-icon">✅</span>
-                                        <div className="insight-data">
-                                            <span className="insight-value accent-green">{strongMatches}</span>
-                                            <span className="insight-label">Strong Matches (&gt;70%)</span>
+                                    <div className="insight-box">
+                                        <div className="box-icon green">✅</div>
+                                        <div className="box-content">
+                                            <span className="box-val">{strongMatches}</span>
+                                            <span className="box-label">Strong Hits</span>
                                         </div>
                                     </div>
-                                    <div className="insight-item">
-                                        <span className="insight-icon">👥</span>
-                                        <div className="insight-data">
-                                            <span className="insight-value accent-slate">{totalCandidates}</span>
-                                            <span className="insight-label">Total Candidates</span>
+                                    <div className="insight-box">
+                                        <div className="box-icon slate">👥</div>
+                                        <div className="box-content">
+                                            <span className="box-val">{totalCandidates}</span>
+                                            <span className="box-label">Applicants</span>
                                         </div>
                                     </div>
-                                    <div className="insight-item">
-                                        <span className="insight-icon">🚫</span>
-                                        <div className="insight-data">
-                                            <span className="insight-value accent-red">{rejectedCount}</span>
-                                            <span className="insight-label">Rejected</span>
+                                    <div className="insight-box">
+                                        <div className="box-icon red">🚫</div>
+                                        <div className="box-content">
+                                            <span className="box-val">{rejectedCount}</span>
+                                            <span className="box-label">Rejected</span>
                                         </div>
                                     </div>
                                 </div>
@@ -212,284 +220,302 @@ const RecruiterDashboard = () => {
                         );
                     })()}
 
-                    <div className="card pipeline-card">
-                        <h3>
-                            Application Pipeline
-                            {selectedJob && (
-                                <span className="job-tag">Viewing: {selectedJob.title}</span>
-                            )}
-                        </h3>
+                    {/* PIPELINE CARD — visible box with scroll inside */}
+                    <div className="pipeline-card">
+                        <div className="pipeline-header">
+                            <h3 className="section-title">Application Pipeline</h3>
+                            {selectedJob && <span className="pipeline-desc">Real-time candidate workflow for {selectedJob.title}</span>}
+                        </div>
 
                         {selectedJob ? (
-                            <StatusBoard
-                                applications={applications}
-                                onUpdate={() => {
-                                    fetchApplications(selectedJob._id);
-                                    fetchData();
-                                }}
-                            />
+                            <div className="pipeline-scroll">
+                                <StatusBoard
+                                    applications={applications}
+                                    onUpdate={() => {
+                                        fetchApplications(selectedJob._id);
+                                        fetchData();
+                                    }}
+                                />
+                            </div>
                         ) : (
-                            <div className="empty-state">
-                                Select a job to view AI-ranked candidates
+                            <div className="dashboard-empty">
+                                <div className="empty-illust">📁</div>
+                                <p>Select a job from the left to view AI-ranked candidates</p>
                             </div>
                         )}
                     </div>
                 </div>
-
             </div>
 
-            {/* STYLES */}
             <style>{`
+                /* Override parent app-container to allow full-width dashboard */
+                .app-container {
+                    max-width: none !important;
+                    padding: 0 !important;
+                }
+
                 .dashboard-container {
-                    max-width: 1440px;
-                    margin: 0 auto;
-                    padding-top: 0;
+                    width: 100%;
+                    padding: 24px 48px;
+                    background: #f8fafc;
+                    min-height: 100vh;
+                    box-sizing: border-box;
                 }
 
-                .dashboard-hero {
-                    margin-top: 0;
-                    margin-bottom: 1.5rem;
+                .dashboard-header {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 12px;
+                    margin-bottom: 28px;
+                    border-bottom: 1px solid #e2e8f0;
+                    padding-bottom: 20px;
                 }
 
-                .dashboard-hero h1 {
-                    margin: 0 0 0.35rem 0;
-                    font-size: 1.65rem;
+                .dashboard-title {
+                    font-size: 2.2rem;
                     font-weight: 800;
                     color: #0f172a;
-                    letter-spacing: -0.01em;
+                    margin: 0;
+                    letter-spacing: -0.02em;
                 }
 
-                .dashboard-hero p {
+                .subtitle {
                     color: #64748b;
+                    font-size: 1rem;
                     margin: 0;
                 }
 
-                .stats-grid {
+                .stats-header {
                     display: flex;
-                    gap: 1rem;
-                    margin-bottom: 1.5rem;
-                    flex-wrap: wrap;
+                    gap: 12px;
+                    margin-top: 4px;
                 }
 
-                .stat-card {
+                .stat-pill {
                     background: white;
-                    padding: 1.2rem 1.5rem;
-                    border-radius: 14px;
+                    padding: 8px 16px;
+                    border-radius: 10px;
                     border: 1px solid #e2e8f0;
-                    box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    font-size: 0.9rem;
+                    font-weight: 700;
+                    color: #475569;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
                 }
 
-                .stat-card h2 {
-                    color: #2563eb;
-                    margin: 0;
-                }
-
-                .stat-card span {
-                    font-size: 0.8rem;
-                    color: #64748b;
-                }
+                .pill-val { font-weight: 800; font-size: 1.15rem; }
+                .pill-label { font-size: 0.75rem; font-weight: 600; color: #64748b; text-transform: uppercase; }
+                .stat-pill.blue .pill-val { color: #2563eb; }
+                .stat-pill.purple .pill-val { color: #7c3aed; }
 
                 .dashboard-grid {
                     display: grid;
-                    grid-template-columns: 340px 1fr;
-                    gap: 1.5rem;
+                    grid-template-columns: 360px 1fr;
+                    gap: 32px;
                     align-items: start;
                 }
 
-                .left-panel > .card:last-child {
-                    margin-bottom: 0;
+                /* CRITICAL FIX: min-width: 0 prevents grid blowout from max-content children */
+                .right-panel {
+                    min-width: 0;
+                    overflow: hidden;
                 }
 
-                .right-panel > .card:last-child,
-                .right-panel > .insights-card:last-of-type {
-                    margin-bottom: 0;
+                .left-panel {
+                    min-width: 0;
                 }
 
                 .card {
                     background: white;
-                    padding: 1.5rem;
                     border-radius: 16px;
                     border: 1px solid #e2e8f0;
-                    box-shadow: 0 4px 20px rgba(0,0,0,0.04);
-                    margin-bottom: 1.25rem;
+                    box-shadow: 0 6px 24px rgba(0,0,0,0.06);
+                    margin-bottom: 20px;
                 }
 
-                .card h3 {
-                    font-size: 1.25rem;
+                .card-header {
+                    padding: 16px 20px;
+                    border-bottom: 1px solid #f1f5f9;
+                    background: #fafafa;
+                    border-radius: 16px 16px 0 0;
+                }
+
+                .card-header h3 {
+                    margin: 0;
+                    font-size: 1.05rem;
                     font-weight: 700;
-                    color: #1e293b;
-                    margin: 0 0 1rem 0;
-                }
-
-                .card.pipeline-card {
-                    overflow-x: auto;
+                    color: #334155;
                 }
 
                 .modern-form {
+                    padding: 20px;
                     display: flex;
                     flex-direction: column;
-                    gap: 1rem;
+                    gap: 14px;
                 }
 
-                .form-row {
-                    display: grid;
-                    grid-template-columns: 1fr 1fr;
-                    gap: 1rem;
+                .form-group {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 6px;
+                }
+
+                .form-group label {
+                    font-size: 0.8rem;
+                    font-weight: 700;
+                    color: #64748b;
+                    text-transform: uppercase;
                 }
 
                 input, textarea {
-                    padding: 0.8rem;
-                    border-radius: 12px;
+                    width: 100%;
+                    padding: 10px 14px;
                     border: 1px solid #e2e8f0;
+                    border-radius: 10px;
+                    font-size: 0.95rem;
                     background: #f8fafc;
-                    font-size: 0.9rem;
-                }
-
-                textarea {
-                    min-height: 120px;
-                    resize: vertical;
+                    transition: 0.2s;
+                    box-sizing: border-box;
                 }
 
                 input:focus, textarea:focus {
                     outline: none;
                     border-color: #2563eb;
-                    background: white;
                     box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
                 }
 
-                button {
+                textarea { min-height: 120px; resize: vertical; }
+
+                .primary-btn {
                     background: #2563eb;
                     color: white;
-                    padding: 0.7rem 1.5rem;
-                    border-radius: 12px;
+                    padding: 12px;
+                    border-radius: 10px;
                     border: none;
+                    font-weight: 700;
+                    font-size: 1rem;
                     cursor: pointer;
-                    font-weight: 600;
+                    margin-top: 4px;
+                    transition: 0.2s;
                 }
 
-                button:hover {
-                    background: #1d4ed8;
+                .primary-btn:hover { background: #1d4ed8; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
+
+                .job-list-compact {
+                    padding: 12px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 4px;
                 }
 
-                .job-item {
-                    padding: 1rem;
-                    border-radius: 12px;
-                    border: 1px solid #f1f5f9;
+                .job-item-mini {
+                    padding: 12px 16px;
+                    border-radius: 10px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
                     cursor: pointer;
                     transition: 0.2s;
                 }
 
-                .job-item:hover {
-                    background: #f8fafc;
-                }
+                .job-item-mini:hover { background: #f1f5f9; }
+                .job-item-mini.active { background: #eff6ff; border: 1px solid #bfdbfe; }
+                .jt { font-weight: 700; color: #1e293b; font-size: 0.95rem; }
+                .jc { font-size: 0.8rem; color: #64748b; }
+                .active-dot { width: 8px; height: 8px; border-radius: 50%; background: #2563eb; }
+                .job-info { display: flex; flex-direction: column; gap: 2px; }
 
-                .job-item.active {
-                    background: #eff6ff;
-                    border-color: #2563eb;
-                }
-
-                .job-item span {
-                    display: block;
-                    font-size: 0.8rem;
-                    color: #64748b;
-                }
-
-                .job-tag {
-                    margin-left: 1rem;
-                    font-size: 0.8rem;
-                    color: #2563eb;
-                }
-
-                .empty-state {
-                    padding: 3rem;
-                    text-align: center;
-                    color: #94a3b8;
-                }
-
-                /* ── AI Hiring Insights ── */
-                .insights-card {
-                    background: linear-gradient(135deg, #faf5ff 0%, #eff6ff 50%, #f0fdf4 100%);
+                /* ── AI Insights ── */
+                .insights-premium-card {
+                    background: white;
+                    border-radius: 16px;
                     border: 1px solid #e2e8f0;
-                    padding: 1.5rem;
-                    margin-bottom: 1.25rem;
-                    box-shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 6px rgba(0,0,0,0.03);
+                    padding: 20px;
+                    margin-bottom: 24px;
+                    box-shadow: 0 6px 24px rgba(0,0,0,0.06);
                 }
-                .insights-title {
-                    font-size: 1.25rem;
-                    font-weight: 700;
-                    color: #1e293b;
-                    margin: 0 0 1.25rem 0;
-                }
-                .insights-grid {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-                    gap: 0.75rem;
-                }
-                .insight-item {
+
+                .insights-header {
                     display: flex;
                     align-items: center;
-                    gap: 0.6rem;
-                    background: rgba(255,255,255,0.85);
-                    backdrop-filter: blur(4px);
-                    padding: 0.7rem 0.85rem;
-                    border-radius: 12px;
-                    border: 1px solid #f1f5f9;
-                    transition: box-shadow 0.2s, transform 0.2s;
+                    gap: 10px;
+                    margin-bottom: 16px;
                 }
-                .insight-item:hover {
-                    box-shadow: 0 4px 14px rgba(0,0,0,0.06);
-                    transform: translateY(-1px);
+
+                .insights-header h3 { font-size: 1.4rem; font-weight: 700; margin: 0; }
+                .job-badge { background: #f1f5f9; padding: 6px 12px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; color: #475569; }
+
+                .insights-row {
+                    display: grid;
+                    grid-template-columns: repeat(5, 1fr);
+                    gap: 14px;
                 }
-                .insight-icon {
-                    font-size: 1.3rem;
-                    flex-shrink: 0;
-                }
-                .insight-data {
+
+                .insight-box {
+                    background: #f8fafc;
+                    padding: 12px;
+                    border-radius: 10px;
                     display: flex;
-                    flex-direction: column;
-                    min-width: 0;
+                    gap: 10px;
+                    align-items: center;
                 }
-                .insight-value {
-                    font-size: 1.2rem;
-                    font-weight: 700;
-                    line-height: 1.3;
-                    white-space: nowrap;
+
+                .box-icon { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); font-size: 1rem; }
+                .box-val { font-size: 1.1rem; font-weight: 800; }
+                .box-label { font-size: 0.7rem; color: #64748b; text-transform: uppercase; }
+                .box-content { display: flex; flex-direction: column; }
+
+                /* ── Pipeline Card (visible box) ── */
+                .pipeline-card {
+                    background: #ffffff;
+                    border-radius: 16px;
+                    padding: 24px;
+                    box-shadow: 0 6px 24px rgba(0,0,0,0.06);
+                    border: 1px solid #e2e8f0;
                     overflow: hidden;
-                    text-overflow: ellipsis;
                 }
-                .insight-label {
-                    font-size: 0.85rem;
+
+                .pipeline-header { margin-bottom: 20px; }
+
+                .section-title {
+                    font-size: 1.4rem;
+                    font-weight: 700;
+                    color: #0f172a;
+                    margin: 0 0 4px 0;
+                }
+
+                .pipeline-desc {
+                    font-size: 0.9rem;
                     color: #64748b;
-                    font-weight: 500;
-                    white-space: nowrap;
+                    display: block;
                 }
-                .accent-blue   { color: #2563eb; }
-                .accent-purple { color: #7c3aed; }
-                .accent-green  { color: #059669; }
-                .accent-slate  { color: #334155; }
-                .accent-red    { color: #dc2626; }
+
+                /* Scrollable pipeline container INSIDE the card */
+                .pipeline-scroll {
+                    overflow-x: auto;
+                    overflow-y: hidden;
+                    padding-bottom: 12px;
+                    scroll-behavior: smooth;
+                    scrollbar-width: thin;
+                    scrollbar-color: #cbd5e1 transparent;
+                }
+
+                .pipeline-scroll::-webkit-scrollbar { height: 6px; }
+                .pipeline-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+                .pipeline-scroll::-webkit-scrollbar-track { background: transparent; }
+
+                .dashboard-empty { padding: 3rem 1rem; text-align: center; color: #94a3b8; }
+                .empty-illust { font-size: 2.5rem; margin-bottom: 12px; }
 
                 @media (max-width: 1024px) {
-                    .dashboard-grid {
-                        grid-template-columns: 300px 1fr;
-                    }
-                }
-
-                @media (max-width: 900px) {
-                    .dashboard-grid {
-                        grid-template-columns: 1fr;
-                    }
-
-                    .form-row {
-                        grid-template-columns: 1fr;
-                    }
-
-                    .insights-grid {
-                        grid-template-columns: repeat(2, 1fr);
-                    }
+                    .dashboard-grid { grid-template-columns: 1fr; gap: 20px; }
+                    .dashboard-container { padding: 20px; }
+                    .insights-row { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
                 }
             `}</style>
-
         </div>
     );
 };

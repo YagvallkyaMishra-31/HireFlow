@@ -35,7 +35,7 @@ body {
 .app-container {
   max-width: 1440px;
   margin: 0 auto;
-  padding: 0 2.5rem 28px 2.5rem;
+  padding: 0 2rem 24px 2rem;
 }
 
 /* Global Typography Scaling */

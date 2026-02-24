@@ -4,6 +4,10 @@ const Job = require('../models/Job');
 // @desc    Create a new job
 // @route   POST /api/jobs
 // @access  Private/Recruiter
+const escapeRegExp = (string) => {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
+
 const createJob = asyncHandler(async (req, res) => {
     const { title, description, company } = req.body;
 
@@ -21,7 +25,7 @@ const createJob = asyncHandler(async (req, res) => {
     ];
 
     const extractedSkills = commonSkills.filter(skill =>
-        new RegExp(`\\b${skill}\\b`, 'i').test(description)
+        new RegExp(`\\b${escapeRegExp(skill)}\\b`, 'i').test(description)
     );
 
     const job = await Job.create({
