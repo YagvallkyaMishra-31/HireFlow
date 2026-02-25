@@ -17,8 +17,10 @@ dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 
-// Security Middleware
-app.use(helmet());
+// Security Middleware — disable CSP so Vite-built React assets can load
+app.use(helmet({
+    contentSecurityPolicy: false,
+}));
 
 // CORS configuration
 const allowedOrigins = [
