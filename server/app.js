@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
@@ -78,17 +79,28 @@ app.use('/api/applications', applicationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/match', require('./routes/matchRoutes'));
 
-// Base route
-app.get('/', (req, res) => {
-    res.send('HireFlow API is running...');
-});
+// ---------- Production: serve React build ----------
+if (process.env.NODE_ENV === 'production') {
+    // Serve static assets from client/dist
+    app.use(express.static(path.join(__dirname, '../client/dist')));
 
-// 404 handler for non-existent routes
-app.use((req, res, next) => {
-    const error = new Error(`Not Found - ${req.originalUrl}`);
-    res.status(404);
-    next(error);
-});
+    // Any route that is NOT /api/* → send index.html (SPA fallback)
+    app.get('*', (req, res) => {
+        res.sendFile(path.resolve(__dirname, '../client/dist', 'index.html'));
+    });
+} else {
+    // Dev-only base route
+    app.get('/', (req, res) => {
+        res.send('HireFlow API is running...');
+    });
+
+    // 404 handler (dev only — in production the SPA fallback handles it)
+    app.use((req, res, next) => {
+        const error = new Error(`Not Found - ${req.originalUrl}`);
+        res.status(404);
+        next(error);
+    });
+}
 
 // Centralized error middleware
 app.use(errorHandler);
