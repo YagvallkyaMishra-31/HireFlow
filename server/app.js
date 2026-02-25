@@ -10,9 +10,10 @@ const jobRoutes = require('./routes/jobRoutes');
 const applicationRoutes = require('./routes/applicationRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const errorHandler = require('./middleware/errorMiddleware');
+const fs = require('fs');
 
-// Load environment variables
-dotenv.config();
+// Load environment variables from server/.env (uses __dirname so it works regardless of CWD)
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 
@@ -80,13 +81,16 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/match', require('./routes/matchRoutes'));
 
 // ---------- Production: serve React build ----------
-if (process.env.NODE_ENV === 'production') {
+const distPath = path.join(__dirname, '../client/dist');
+const isProduction = process.env.NODE_ENV?.trim() === 'production' || fs.existsSync(path.join(distPath, 'index.html'));
+
+if (isProduction && fs.existsSync(path.join(distPath, 'index.html'))) {
     // Serve static assets from client/dist
-    app.use(express.static(path.join(__dirname, '../client/dist')));
+    app.use(express.static(distPath));
 
     // Any route that is NOT /api/* → send index.html (SPA fallback)
     app.get('*', (req, res) => {
-        res.sendFile(path.resolve(__dirname, '../client/dist', 'index.html'));
+        res.sendFile(path.resolve(distPath, 'index.html'));
     });
 } else {
     // Dev-only base route
