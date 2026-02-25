@@ -28,8 +28,5 @@ Thumbs.db
 
 # Misc
 response.json
-server_log.txt
-server_log_tail_utf8.txt
-server_log_tail_utf8_v2.txt
-server_log_utf8.txt
+server_log*.txt
 test_api.js
