@@ -89,7 +89,7 @@ if (isProduction && fs.existsSync(path.join(distPath, 'index.html'))) {
     app.use(express.static(distPath));
 
     // Any route that is NOT /api/* → send index.html (SPA fallback)
-    app.get('*', (req, res) => {
+    app.use((req, res) => {
         res.sendFile(path.resolve(distPath, 'index.html'));
     });
 } else {
