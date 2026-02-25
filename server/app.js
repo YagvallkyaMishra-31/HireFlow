@@ -35,10 +35,11 @@ app.use(cors({
         // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
 
-        // Check if origin is localhost (any port) or in allowedOrigins
+        // Check if origin is localhost (any port), in allowedOrigins, or a Render URL
         const isLocalhost = /^http:\/\/localhost:\d+$/.test(origin);
+        const isRender = /^https:\/\/.*\.onrender\.com$/.test(origin);
 
-        if (isLocalhost || allowedOrigins.includes(origin)) {
+        if (isLocalhost || isRender || allowedOrigins.includes(origin)) {
             return callback(null, true);
         } else {
             console.error(`CORS Blocked for origin: ${origin}`);
