@@ -38,8 +38,9 @@ app.use(cors({
         // Check if origin is localhost (any port), in allowedOrigins, or a Render URL
         const isLocalhost = /^http:\/\/localhost:\d+$/.test(origin);
         const isRender = /^https:\/\/.*\.onrender\.com$/.test(origin);
+        const isVercel = /^https:\/\/.*\.vercel\.app$/.test(origin);
 
-        if (isLocalhost || isRender || allowedOrigins.includes(origin)) {
+        if (isLocalhost || isRender || isVercel || allowedOrigins.includes(origin)) {
             return callback(null, true);
         } else {
             console.error(`CORS Blocked for origin: ${origin}`);
@@ -50,7 +51,11 @@ app.use(cors({
 }));
 
 // Body parser with size limit
-app.use(express.json({ limit: '10kb' }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Serve uploaded resumes
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Sanitize data against XSS
 // Removed xss-clean due to compatibility issues with newer Node.js versions
