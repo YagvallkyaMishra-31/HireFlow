@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import ApplicationModal from '../components/ApplicationModal';
 
 const JobDetails = () => {
     const { id } = useParams();
@@ -12,7 +13,7 @@ const JobDetails = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [applied, setApplied] = useState(false);
-    const [success, setSuccess] = useState('');
+    const [showModal, setShowModal] = useState(false);
 
     useEffect(() => {
         const fetchJob = async () => {
@@ -30,17 +31,21 @@ const JobDetails = () => {
         fetchJob();
     }, [id]);
 
-    const handleApply = async () => {
-        try {
-            const response = await api.post('/applications', { job: id });
-            if (response.data.success) {
-                setApplied(true);
-                setSuccess('Application submitted successfully!');
+    // Check if user already applied
+    useEffect(() => {
+        if (!user || user.role !== 'candidate') return;
+        const checkApplied = async () => {
+            try {
+                const res = await api.get(`/applications/check/${id}`);
+                if (res.data.applied) {
+                    setApplied(true);
+                }
+            } catch {
+                // silently ignore
             }
-        } catch (err) {
-            setError(err.response?.data?.message || 'Failed to submit application.');
-        }
-    };
+        };
+        checkApplied();
+    }, [id, user]);
 
     if (loading) return <div className="page">Loading job details...</div>;
     if (error) return <div className="page"><div className="error-message">{error}</div><button onClick={() => navigate('/jobs')}>Back to Jobs</button></div>;
@@ -62,7 +67,20 @@ const JobDetails = () => {
             <div className="job-meta-details">
                 <span><strong>Posted by:</strong> {job.postedBy?.name}</span>
                 <span><strong>Date:</strong> {new Date(job.createdAt).toLocaleDateString()}</span>
+                {job.location && <span><strong>Location:</strong> {job.location}</span>}
+                {job.experienceRequired > 0 && <span><strong>Experience:</strong> {job.experienceRequired}+ years</span>}
             </div>
+
+            {job.requiredSkills && job.requiredSkills.length > 0 && (
+                <div className="job-skills-section">
+                    <h3>Required Skills</h3>
+                    <div className="skills-tags">
+                        {job.requiredSkills.map((skill, i) => (
+                            <span key={i} className="skill-tag">{skill}</span>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <div className="job-content">
                 <h3>Description</h3>
@@ -73,12 +91,12 @@ const JobDetails = () => {
                 <div className="application-section">
                     <div className="action-buttons" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                         <button
-                            onClick={handleApply}
+                            onClick={() => setShowModal(true)}
                             disabled={applied}
                             style={{ width: 'auto', padding: '0.75rem 2rem', fontSize: '1rem' }}
                             className={applied ? 'btn-success' : 'btn-primary'}
                         >
-                            {applied ? '✓ Application Sent' : 'Apply for this Position'}
+                            {applied ? '✓ Already Applied' : 'Apply for this Position'}
                         </button>
 
                         <button
@@ -104,7 +122,6 @@ const JobDetails = () => {
                             ✨ Analyze My Resume For This Job
                         </button>
                     </div>
-                    {success && <p className="success-txt">{success}</p>}
                 </div>
             )}
 
@@ -112,6 +129,17 @@ const JobDetails = () => {
                 <p className="login-prompt">
                     Please <Link to="/login">login as a candidate</Link> to apply for this job.
                 </p>
+            )}
+
+            {showModal && (
+                <ApplicationModal
+                    job={job}
+                    onClose={() => setShowModal(false)}
+                    onSuccess={() => {
+                        setShowModal(false);
+                        setApplied(true);
+                    }}
+                />
             )}
 
             <style>{`
@@ -149,9 +177,33 @@ const JobDetails = () => {
           font-size: 0.95rem;
           border: 1px solid #e2e8f0;
           box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+          flex-wrap: wrap;
         }
         .job-meta-details strong {
           color: #334155;
+        }
+        .job-skills-section {
+          margin-bottom: 2rem;
+        }
+        .job-skills-section h3 {
+          margin-bottom: 0.75rem;
+          font-size: 1.1rem;
+          font-weight: 700;
+          color: #0f172a;
+        }
+        .skills-tags {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.5rem;
+        }
+        .skill-tag {
+          background: #eff6ff;
+          color: #2563eb;
+          padding: 0.35rem 0.75rem;
+          border-radius: 20px;
+          font-size: 0.82rem;
+          font-weight: 600;
+          border: 1px solid #bfdbfe;
         }
         .job-content {
           margin-bottom: 2rem;
@@ -194,12 +246,6 @@ const JobDetails = () => {
           font-weight: 700 !important;
           border-radius: 12px !important;
           box-shadow: 0 4px 12px rgba(5,150,105,0.25);
-        }
-        .success-txt {
-          color: #16a34a;
-          margin-top: 1rem;
-          font-weight: 600;
-          font-size: 0.95rem;
         }
         .login-prompt {
           margin-top: 2rem;

@@ -1,29 +1,12 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import api from '../services/api';
+import ApplicationModal from './ApplicationModal';
 
 const JobCard = ({ job, loading: isLoading }) => {
   const { user } = useAuth();
   const [applied, setApplied] = useState(false);
-  const [btnLoading, setBtnLoading] = useState(false);
-  const [message, setMessage] = useState('');
-
-  const handleApply = async () => {
-    setBtnLoading(true);
-    setMessage('');
-    try {
-      const response = await api.post('/applications', { job: job._id });
-      if (response.data.success) {
-        setApplied(true);
-        setMessage('Application sent successfully!');
-      }
-    } catch (error) {
-      setMessage(error.response?.data?.message || 'Failed to apply. Please try again.');
-    } finally {
-      setBtnLoading(false);
-    }
-  };
+  const [showModal, setShowModal] = useState(false);
 
   const isCandidate = user?.role === 'candidate';
 
@@ -63,6 +46,9 @@ const JobCard = ({ job, loading: isLoading }) => {
         <div className="jc-badges">
           <span className="badge-company">{job.company}</span>
           <span className="badge-date">{new Date(job.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+          {job.location && job.location !== 'Remote' && (
+            <span className="badge-location">📍 {job.location}</span>
+          )}
         </div>
         <h3 className="jc-title">{job.title}</h3>
         <p className="jc-desc">
@@ -70,21 +56,44 @@ const JobCard = ({ job, loading: isLoading }) => {
             ? `${job.description.substring(0, 110)}...`
             : job.description}
         </p>
+
+        {/* Skills preview */}
+        {job.requiredSkills && job.requiredSkills.length > 0 && (
+          <div className="jc-skills">
+            {job.requiredSkills.slice(0, 3).map((skill, i) => (
+              <span key={i} className="jc-skill-tag">{skill}</span>
+            ))}
+            {job.requiredSkills.length > 3 && (
+              <span className="jc-skill-more">+{job.requiredSkills.length - 3}</span>
+            )}
+          </div>
+        )}
+
         <div className="jc-spacer"></div>
         <div className="jc-footer">
           <Link to={`/jobs/${job._id}`} className="jc-link">View Details →</Link>
           {isCandidate && (
             <button
-              onClick={handleApply}
-              disabled={applied || btnLoading}
+              onClick={() => applied ? null : setShowModal(true)}
+              disabled={applied}
               className={applied ? 'jc-btn-done' : 'jc-btn-apply'}
             >
-              {btnLoading ? '...' : applied ? '✓ Applied' : 'Apply'}
+              {applied ? '✓ Applied' : 'Apply'}
             </button>
           )}
         </div>
-        {message && <div className={`jc-msg ${applied ? 'ok' : 'err'}`}>{message}</div>}
       </div>
+
+      {showModal && (
+        <ApplicationModal
+          job={job}
+          onClose={() => setShowModal(false)}
+          onSuccess={() => {
+            setShowModal(false);
+            setApplied(true);
+          }}
+        />
+      )}
 
       <style>{`
         .jc-wrap {
@@ -128,6 +137,11 @@ const JobCard = ({ job, loading: isLoading }) => {
           padding: 0.2rem 0.5rem; border-radius: 6px;
           font-size: 0.62rem; font-weight: 600;
         }
+        .badge-location {
+          background: #fef3c7; color: #92400e;
+          padding: 0.2rem 0.5rem; border-radius: 6px;
+          font-size: 0.62rem; font-weight: 600;
+        }
         .jc-title {
           font-size: 1.05rem; font-weight: 800;
           color: #1e293b; letter-spacing: -0.02em;
@@ -141,6 +155,29 @@ const JobCard = ({ job, loading: isLoading }) => {
           -webkit-box-orient: vertical;
           overflow: hidden;
           margin: 0;
+        }
+        .jc-skills {
+          display: flex;
+          gap: 0.35rem;
+          flex-wrap: wrap;
+          margin-top: 0.6rem;
+        }
+        .jc-skill-tag {
+          background: #f8fafc;
+          color: #475569;
+          padding: 0.15rem 0.45rem;
+          border-radius: 5px;
+          font-size: 0.62rem;
+          font-weight: 600;
+          border: 1px solid #e2e8f0;
+        }
+        .jc-skill-more {
+          background: #eff6ff;
+          color: #2563eb;
+          padding: 0.15rem 0.4rem;
+          border-radius: 5px;
+          font-size: 0.62rem;
+          font-weight: 700;
         }
         .jc-spacer {
           flex: 1; min-height: 0.75rem;
@@ -172,12 +209,6 @@ const JobCard = ({ job, loading: isLoading }) => {
           font-size: 0.75rem; font-weight: 700;
           box-shadow: none !important; cursor: default;
         }
-        .jc-msg {
-          font-size: 0.7rem; padding: 0.4rem;
-          border-radius: 6px; text-align: center; margin-top: 0.5rem;
-        }
-        .jc-msg.ok { background:#f0fdf4; color:#16a34a; }
-        .jc-msg.err { background:#fef2f2; color:#dc2626; }
       `}</style>
     </div>
   );

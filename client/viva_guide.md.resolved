@@ -1,0 +1,367 @@
+# 🎓 HireFlow — Viva Preparation Guide
+
+## 1. What is HireFlow?
+
+**HireFlow** is a **Recruitment Workflow System** — a full-stack web application that helps **recruiters** post jobs and manage applications, and helps **candidates** discover jobs, apply, and track their application status. It also includes an **AI-powered matching engine** that scores candidates against job requirements.
+
+---
+
+## 2. Tech Stack (MERN)
+
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| **M** — Database | **MongoDB** (via Mongoose ODM) | NoSQL document database, stores Users, Jobs, Applications |
+| **E** — Backend | **Express.js** (v5) | Node.js web framework for REST API |
+| **R** — Frontend | **React** (v18) with Vite | Single Page Application (SPA) UI |
+| **N** — Runtime | **Node.js** | JavaScript runtime for the server |
+
+### Key Libraries
+
+| Library | Where | Why |
+|---------|-------|-----|
+| `bcryptjs` | Server | Hashes passwords before storing in DB |
+| `jsonwebtoken` | Server | Creates JWT tokens for authentication |
+| `helmet` | Server | Adds security HTTP headers |
+| `cors` | Server | Enables Cross-Origin Resource Sharing |
+| `express-rate-limit` | Server | Prevents brute-force / DDoS attacks |
+| `morgan` | Server | HTTP request logging in development |
+| `validator` | Server | Email validation |
+| `mongoose` | Server | MongoDB object modeling (ODM) |
+| `axios` | Client | HTTP client for API calls |
+| `react-router-dom` | Client | Client-side routing (SPA navigation) |
+| `lucide-react` | Client | Icon library |
+| `vite` | Client | Fast build tool & dev server |
+
+---
+
+## 3. Project Structure — File-by-File Explanation
+
+```
+HireFlow_Project/
+├── package.json          ← Root: runs client + server together ("concurrently")
+├── .gitignore            ← Files Git should ignore (node_modules, .env, logs)
+│
+├── server/               ← BACKEND (Express + MongoDB)
+│   ├── server.js         ← Entry point: connects to DB, starts HTTP server
+│   ├── app.js            ← Express app config: middleware, routes, error handling
+│   ├── .env              ← Environment variables (DB URI, JWT secret, etc.)
+│   ├── .env.example      ← Template showing which env vars are needed
+│   ├── package.json      ← Server dependencies
+│   │
+│   ├── config/
+│   │   └── db.js         ← MongoDB connection using mongoose.connect()
+│   │
+│   ├── models/           ← Mongoose Schemas (database structure)
+│   │   ├── User.js       ← User schema: name, email, password, role, skills
+│   │   ├── Job.js        ← Job schema: title, description, company, requiredSkills
+│   │   └── Application.js ← Application schema: job, candidate, status, matchScore, history
+│   │
+│   ├── controllers/      ← Business logic for each route
+│   │   ├── authController.js        ← Register & Login logic
+│   │   ├── jobController.js         ← CRUD for jobs + search/pagination
+│   │   ├── applicationController.js ← Apply, withdraw, update status, AI scoring
+│   │   ├── dashboardController.js   ← Aggregated stats for recruiter dashboard
+│   │   └── matchController.js       ← AI matching: scores candidates against a job
+│   │
+│   ├── routes/           ← URL → Controller mapping
+│   │   ├── authRoutes.js        ← POST /api/auth/register, /api/auth/login
+│   │   ├── jobRoutes.js         ← GET/POST /api/jobs, GET /api/jobs/:id
+│   │   ├── applicationRoutes.js ← POST /api/applications, PATCH status/withdraw
+│   │   ├── dashboardRoutes.js   ← GET /api/dashboard/stats
+│   │   └── matchRoutes.js       ← GET /api/match/job/:jobId
+│   │
+│   ├── middleware/       ← Functions that run BEFORE controllers
+│   │   ├── authMiddleware.js  ← Verifies JWT token → attaches req.user
+│   │   ├── roleMiddleware.js  ← Checks if user has required role (recruiter/admin)
+│   │   └── errorMiddleware.js ← Centralized error handler (catches all thrown errors)
+│   │
+│   └── utils/
+│       └── generateToken.js ← Creates a JWT token (expires in 30 days)
+│
+├── client/               ← FRONTEND (React + Vite)
+│   ├── index.html        ← Root HTML file (Vite injects React here)
+│   ├── vite.config.js    ← Vite config: proxies /api requests to backend
+│   ├── package.json      ← Client dependencies
+│   │
+│   └── src/
+│       ├── main.jsx      ← React entry point: renders <App /> into DOM
+│       ├── App.jsx        ← Router setup: all routes defined here
+│       ├── index.css      ← Global styles
+│       │
+│       ├── context/
+│       │   └── AuthContext.jsx ← React Context for auth state (user, token, login, logout)
+│       │
+│       ├── services/
+│       │   └── api.js     ← Axios instance with auth interceptor + auto-logout on 401
+│       │
+│       ├── components/    ← Reusable UI pieces
+│       │   ├── Navbar.jsx           ← Navigation bar (shows different links per role)
+│       │   ├── JobCard.jsx          ← Single job card displayed in JobList
+│       │   ├── ProtectedRoute.jsx   ← Wrapper that blocks unauthenticated/unauthorized access
+│       │   ├── StatusBoard.jsx      ← Kanban-style application pipeline (drag & drop statuses)
+│       │   └── ApplicationTimeline.jsx ← Shows history of status changes for an application
+│       │
+│       └── pages/         ← Full page components (one per route)
+│           ├── Login.jsx              ← Login form
+│           ├── Register.jsx           ← Registration form (candidate or recruiter)
+│           ├── JobList.jsx            ← Browse all jobs with search, filter, pagination
+│           ├── JobDetails.jsx         ← Single job view + apply button
+│           ├── RecruiterDashboard.jsx ← Recruiter's dashboard: stats, jobs, pipeline
+│           ├── CandidateDashboard.jsx ← Candidate's view: my applications, statuses
+│           └── ResumeAnalyzer.jsx     ← AI Resume Analyzer page
+```
+
+---
+
+## 4. How the App Works — Flow Diagrams
+
+### 4.1 Authentication Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant React
+    participant Express
+    participant MongoDB
+
+    User->>React: Fill login form
+    React->>Express: POST /api/auth/login {email, password}
+    Express->>MongoDB: Find user by email
+    MongoDB-->>Express: User document (with hashed password)
+    Express->>Express: bcrypt.compare(entered, hashed)
+    Express->>Express: Generate JWT token
+    Express-->>React: {user data + token}
+    React->>React: Store token in localStorage
+    React->>React: Update AuthContext
+```
+
+### 4.2 Job Application Flow
+
+```mermaid
+sequenceDiagram
+    participant Candidate
+    participant React
+    participant Express
+    participant MongoDB
+
+    Candidate->>React: Click "Apply" on job
+    React->>Express: POST /api/applications {jobId}
+    Note over Express: authMiddleware verifies JWT
+    Express->>MongoDB: Fetch Job (for skills, experience)
+    Express->>Express: Calculate AI Match Score
+    Express->>MongoDB: Create Application document
+    MongoDB-->>Express: Saved application
+    Express-->>React: {application + scores}
+```
+
+### 4.3 Application Status Pipeline
+
+```
+Applied → Screening → Interview → Technical → HR → Offer → Hired
+  ↘                                                          
+   Rejected (can happen from any stage)
+```
+
+---
+
+## 5. Key Concepts You Must Know
+
+### 5.1 JWT Authentication
+- **What**: JSON Web Token — a signed, encoded string that proves who you are.
+- **How**: On login, server creates a token with `jwt.sign({id}, secret, {expiresIn: '30d'})`. Client stores it in `localStorage` and sends it in every request as `Authorization: Bearer <token>`.
+- **Middleware**: [authMiddleware.js](file:///c:/Users/Yash%20Mishra/OneDrive/Desktop/HireFlow_Project/server/middleware/authMiddleware.js) extracts the token, verifies it with `jwt.verify()`, and attaches the user object to `req.user`.
+
+### 5.2 Password Hashing (bcrypt)
+- Passwords are **never stored in plain text**.
+- Before saving, a Mongoose `pre('save')` hook hashes the password using `bcrypt.genSalt(10)` + `bcrypt.hash()`.
+- On login, `bcrypt.compare()` checks the entered password against the stored hash.
+- **Salt rounds = 10** means 2^10 iterations of the hashing algorithm.
+
+### 5.3 Role-Based Access Control (RBAC)
+- Three roles: `candidate`, `recruiter`, `admin`.
+- [roleMiddleware.js](file:///c:/Users/Yash%20Mishra/OneDrive/Desktop/HireFlow_Project/server/middleware/roleMiddleware.js) checks `req.user.role` against allowed roles.
+- Example: Only recruiters can create jobs; only candidates can apply.
+- [ProtectedRoute.jsx](file:///c:/Users/Yash%20Mishra/OneDrive/Desktop/HireFlow_Project/client/src/components/ProtectedRoute.jsx) on the frontend hides routes from unauthorized roles.
+
+### 5.4 AI Matching/Scoring Engine
+- Scores are calculated when a **candidate applies** and also when a **recruiter views applications**.
+- **Three scoring dimensions**:
+  - **Skill Score (60% weight)**: % of job's required skills that the candidate has
+  - **Experience Score (30% weight)**: If candidate meets required experience = 100, else proportional
+  - **Location Score (10% weight)**: 100 if locations match, 0 otherwise
+- **Formula**: `matchScore = (skillScore × 0.6) + (experienceScore × 0.3) + (locationScore × 0.1)`
+
+### 5.5 Mongoose ODM
+- **ODM** = Object Document Mapper (like ORM but for NoSQL).
+- Schemas define the structure of documents: field types, required fields, defaults, validation.
+- **Methods**: `pre('save')` hooks, instance methods like [matchPassword()](file:///c:/Users/Yash%20Mishra/OneDrive/Desktop/HireFlow_Project/server/models/User.js#61-65).
+- **Population**: `.populate('postedBy', 'name email')` replaces an ObjectId with the actual User data.
+- **Indexing**: Fields like `email`, `title`, `company` are indexed for faster queries.
+- **Compound Index**: `{ job: 1, candidate: 1 }` on Application prevents duplicate applications.
+
+### 5.6 React Context API
+- [AuthContext.jsx](file:///c:/Users/Yash%20Mishra/OneDrive/Desktop/HireFlow_Project/client/src/context/AuthContext.jsx) uses `createContext()` to share auth state globally.
+- Avoids "prop drilling" — any component can call [useAuth()](file:///c:/Users/Yash%20Mishra/OneDrive/Desktop/HireFlow_Project/client/src/context/AuthContext.jsx#39-46) to get `user`, `token`, [login()](file:///c:/Users/Yash%20Mishra/OneDrive/Desktop/HireFlow_Project/client/src/context/AuthContext.jsx#18-24), [logout()](file:///c:/Users/Yash%20Mishra/OneDrive/Desktop/HireFlow_Project/client/src/context/AuthContext.jsx#25-31).
+- Uses `localStorage` to persist login across page refreshes.
+
+### 5.7 Axios Interceptors
+- **Request interceptor**: Automatically attaches `Bearer <token>` header to every API call.
+- **Response interceptor**: If server returns 401 (Unauthorized), auto-clears token and redirects to login.
+
+### 5.8 Vite Proxy
+- In development, [vite.config.js](file:///c:/Users/Yash%20Mishra/OneDrive/Desktop/HireFlow_Project/client/vite.config.js) proxies `/api` requests to `http://localhost:5000` (Express server).
+- This avoids CORS issues during development.
+
+---
+
+## 6. API Endpoints Summary
+
+| Method | Endpoint | Access | Description |
+|--------|----------|--------|-------------|
+| `POST` | `/api/auth/register` | Public | Register new user |
+| `POST` | `/api/auth/login` | Public | Login, returns JWT |
+| `GET` | `/api/jobs` | Public | List jobs (search, pagination) |
+| `GET` | `/api/jobs/:id` | Public | Get single job |
+| `POST` | `/api/jobs` | Recruiter | Create new job |
+| `POST` | `/api/applications` | Candidate | Apply to job |
+| `PATCH` | `/api/applications/:id` | Recruiter | Update application status |
+| `PATCH` | `/api/applications/:id/withdraw` | Candidate | Withdraw application |
+| `GET` | `/api/applications/job/:jobId` | Recruiter | Get applications for a job |
+| `GET` | `/api/applications/my` | Candidate | Get my applications |
+| `GET` | `/api/dashboard/stats` | Recruiter/Admin | Dashboard statistics |
+| `GET` | `/api/match/job/:jobId` | Recruiter | Get matching candidates |
+
+---
+
+## 7. Database Schema (MongoDB Collections)
+
+### Users Collection
+| Field | Type | Notes |
+|-------|------|-------|
+| `name` | String | Required |
+| `email` | String | Required, unique, validated by regex |
+| `password` | String | Required, min 6 chars, hashed, `select: false` |
+| `role` | String | `candidate` / `recruiter` / `admin` |
+| `skills` | [String] | For matching engine |
+| `experienceYears` | Number | For matching engine |
+| `location` | String | Default: "Remote" |
+
+### Jobs Collection
+| Field | Type | Notes |
+|-------|------|-------|
+| `title` | String | Required, indexed |
+| `description` | String | Required |
+| `company` | String | Required, indexed |
+| `requiredSkills` | [String] | Auto-extracted from description |
+| `experienceRequired` | Number | In years |
+| `location` | String | Default: "Remote" |
+| `postedBy` | ObjectId → User | The recruiter who posted it |
+
+### Applications Collection
+| Field | Type | Notes |
+|-------|------|-------|
+| `job` | ObjectId → Job | Which job |
+| `candidate` | ObjectId → User | Who applied |
+| `status` | String | Applied → Screening → ... → Hired/Rejected |
+| `notes` | String | Optional notes |
+| `history` | [HistoryEntry] | Audit trail of status changes |
+| `matchScore` | Number | Overall AI score |
+| `skillScore` | Number | Skill component |
+| `experienceScore` | Number | Experience component |
+| `locationScore` | Number | Location component |
+
+---
+
+## 8. Security Measures
+
+| Feature | Implementation |
+|---------|---------------|
+| **Password Hashing** | bcrypt with salt rounds = 10 |
+| **JWT Auth** | Token-based, expires in 30 days |
+| **Helmet** | Sets secure HTTP headers |
+| **CORS** | Whitelist-based origin validation |
+| **Rate Limiting** | 100 requests/min globally, 5/min for login |
+| **Input Validation** | Validator library for emails, manual checks for required fields |
+| **Body Size Limit** | `express.json({ limit: '10kb' })` |
+| **Password Hidden** | `select: false` on password field — never sent to client |
+| **Error Sanitization** | Stack trace hidden in production |
+
+---
+
+## 9. Deployment
+
+- **Platform**: Render.com
+- **How it works**:
+  - `render-build` script: installs both server & client deps, builds client
+  - In production, Express serves the React build (`client/dist`) as static files
+  - SPA fallback: any non-API route returns [index.html](file:///c:/Users/Yash%20Mishra/OneDrive/Desktop/HireFlow_Project/client/index.html) (React handles routing)
+- **Database**: MongoDB Atlas (cloud-hosted MongoDB)
+- **Environment Variables** (set on Render):
+  - `MONGO_URI` — MongoDB Atlas connection string
+  - `JWT_SECRET` — Secret key for signing tokens
+  - `NODE_ENV` — `production`
+  - `CLIENT_URL` — Frontend URL
+
+---
+
+## 10. Common Viva Questions & Answers
+
+### Q1: What is the MERN stack?
+**A**: MERN = **M**ongoDB, **E**xpress.js, **R**eact, **N**ode.js. It's a full-stack JavaScript framework where MongoDB is the database, Express is the backend framework, React is the frontend library, and Node.js is the runtime.
+
+### Q2: Why MongoDB over SQL?
+**A**: MongoDB stores data as JSON-like documents which map naturally to JavaScript objects. It's schema-flexible, scales horizontally, and works well with the MERN stack since everything speaks JSON.
+
+### Q3: What is JWT and why use it?
+**A**: JWT (JSON Web Token) is a stateless authentication mechanism. The server signs a token with a secret, sends it to the client, and the client includes it in future requests. It's stateless (no session storage needed on server) and scalable.
+
+### Q4: How does password security work?
+**A**: Passwords are hashed using bcrypt before storing. bcrypt adds a random salt making each hash unique. We never store or compare plain text passwords — we use `bcrypt.compare()`.
+
+### Q5: What is middleware in Express?
+**A**: Middleware functions run between the incoming request and the route handler. They can modify `req`/`res`, end the request, or call `next()`. Examples: auth check, logging, rate limiting, error handling.
+
+### Q6: What is Mongoose?
+**A**: Mongoose is an ODM (Object Document Mapper) for MongoDB. It provides schema-based data modeling, validation, type casting, query building, and middleware hooks.
+
+### Q7: What is React Context API?
+**A**: Context provides a way to pass data through the component tree without prop drilling. We use it for global auth state — any component can access the current user and token.
+
+### Q8: What is the AI matching engine?
+**A**: It's a scoring algorithm that compares a candidate's profile (skills, experience, location) against a job's requirements and produces a weighted score: 60% skills, 30% experience, 10% location.
+
+### Q9: What is CORS?
+**A**: Cross-Origin Resource Sharing. Browsers block requests from one origin to another by default. CORS headers tell the browser which origins are allowed. Our server whitelist includes localhost ports and the Render URL.
+
+### Q10: How does the app handle errors?
+**A**: We use `express-async-handler` to catch async errors, throw custom Error objects with status codes, and a centralized [errorMiddleware.js](file:///c:/Users/Yash%20Mishra/OneDrive/Desktop/HireFlow_Project/server/middleware/errorMiddleware.js) catches everything and sends a consistent JSON error response.
+
+### Q11: What is role-based access control?
+**A**: Different users have different permissions. Candidates can apply to jobs but can't create them. Recruiters can create jobs and manage applications. This is enforced by [roleMiddleware.js](file:///c:/Users/Yash%20Mishra/OneDrive/Desktop/HireFlow_Project/server/middleware/roleMiddleware.js) on the backend and [ProtectedRoute.jsx](file:///c:/Users/Yash%20Mishra/OneDrive/Desktop/HireFlow_Project/client/src/components/ProtectedRoute.jsx) on the frontend.
+
+### Q12: How does the application pipeline work?
+**A**: Applications follow a workflow: Applied → Screening → Interview → Technical → HR → Offer → Hired/Rejected. Each status change is recorded in a `history` array (audit trail) with timestamp and who changed it.
+
+---
+
+## 11. Quick One-Liners to Remember
+
+- **[server.js](file:///c:/Users/Yash%20Mishra/OneDrive/Desktop/HireFlow_Project/server/server.js)** → "Boots up the server and connects to MongoDB"
+- **[app.js](file:///c:/Users/Yash%20Mishra/OneDrive/Desktop/HireFlow_Project/server/app.js)** → "Configures Express: security, CORS, routes, error handling"
+- **[db.js](file:///c:/Users/Yash%20Mishra/OneDrive/Desktop/HireFlow_Project/server/config/db.js)** → "Connects to MongoDB using Mongoose"
+- **[authMiddleware.js](file:///c:/Users/Yash%20Mishra/OneDrive/Desktop/HireFlow_Project/server/middleware/authMiddleware.js)** → "Verifies JWT tokens and protects routes"
+- **[roleMiddleware.js](file:///c:/Users/Yash%20Mishra/OneDrive/Desktop/HireFlow_Project/server/middleware/roleMiddleware.js)** → "Checks user role before allowing access"
+- **[errorMiddleware.js](file:///c:/Users/Yash%20Mishra/OneDrive/Desktop/HireFlow_Project/server/middleware/errorMiddleware.js)** → "Catches all errors and sends clean JSON responses"
+- **[generateToken.js](file:///c:/Users/Yash%20Mishra/OneDrive/Desktop/HireFlow_Project/server/utils/generateToken.js)** → "Creates a JWT token that expires in 30 days"
+- **[AuthContext.jsx](file:///c:/Users/Yash%20Mishra/OneDrive/Desktop/HireFlow_Project/client/src/context/AuthContext.jsx)** → "Stores who's logged in, shared across all components"
+- **[api.js](file:///c:/Users/Yash%20Mishra/OneDrive/Desktop/HireFlow_Project/test_api.js)** → "Axios instance that auto-attaches auth token to every request"
+- **[ProtectedRoute.jsx](file:///c:/Users/Yash%20Mishra/OneDrive/Desktop/HireFlow_Project/client/src/components/ProtectedRoute.jsx)** → "Blocks pages from users without the right role"
+- **[StatusBoard.jsx](file:///c:/Users/Yash%20Mishra/OneDrive/Desktop/HireFlow_Project/client/src/components/StatusBoard.jsx)** → "Kanban-style board showing applications by status"
+
+---
+
+> [!TIP]
+> When answering, always mention **WHY** you chose something, not just what it is. For example: "We used JWT because it's stateless and doesn't require server-side sessions, making it more scalable."
+
+> [!IMPORTANT]
+> Be prepared to **demo the app live** — show registration, login, job creation, applying, and the recruiter dashboard with the application pipeline.

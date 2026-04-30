@@ -12,7 +12,7 @@ const RecruiterDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
-    const [jobForm, setJobForm] = useState({ title: '', description: '', company: '' });
+    const [jobForm, setJobForm] = useState({ title: '', description: '', company: '', requiredSkills: '', experienceRequired: '', location: '' });
     const [creating, setCreating] = useState(false);
 
     const fetchData = useCallback(async () => {
@@ -52,9 +52,15 @@ const RecruiterDashboard = () => {
         e.preventDefault();
         setCreating(true);
         try {
-            const res = await api.post('/jobs', jobForm);
+            const res = await api.post('/jobs', {
+                ...jobForm,
+                requiredSkills: jobForm.requiredSkills
+                    ? jobForm.requiredSkills.split(',').map(s => s.trim()).filter(Boolean)
+                    : [],
+                experienceRequired: jobForm.experienceRequired ? Number(jobForm.experienceRequired) : 0
+            });
             if (res.data.success) {
-                setJobForm({ title: '', description: '', company: '' });
+                setJobForm({ title: '', description: '', company: '', requiredSkills: '', experienceRequired: '', location: '' });
                 fetchData();
                 alert('Job created successfully!');
             }
@@ -71,15 +77,14 @@ const RecruiterDashboard = () => {
     return (
         <div className="dashboard-container">
             {/* GLOBAL CSS OVERRIDES */}
-            <style dangerouslySetInnerHTML={{
-                __html: `
+            <style>{`
                 html, body { 
                     overflow-x: hidden !important; 
                     margin: 0; 
                     padding: 0;
                     width: 100%;
                 }
-            ` }} />
+            `}</style>
 
             <div className="dashboard-header">
                 <div className="header-content">
@@ -127,9 +132,39 @@ const RecruiterDashboard = () => {
                                 />
                             </div>
                             <div className="form-group">
+                                <label>Required Skills <span style={{ fontWeight: 400, color: '#94a3b8', fontSize: '0.7rem' }}>(comma-separated)</span></label>
+                                <input
+                                    type="text"
+                                    placeholder="React, Node.js, MongoDB"
+                                    value={jobForm.requiredSkills}
+                                    onChange={e => setJobForm({ ...jobForm, requiredSkills: e.target.value })}
+                                />
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                <div className="form-group">
+                                    <label>Experience (years)</label>
+                                    <input
+                                        type="number"
+                                        placeholder="0"
+                                        min="0"
+                                        value={jobForm.experienceRequired}
+                                        onChange={e => setJobForm({ ...jobForm, experienceRequired: e.target.value })}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Location</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Remote"
+                                        value={jobForm.location}
+                                        onChange={e => setJobForm({ ...jobForm, location: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                            <div className="form-group">
                                 <label>Job Description</label>
                                 <textarea
-                                    placeholder="Describe role, required skills, experience..."
+                                    placeholder="Describe role, responsibilities, requirements..."
                                     value={jobForm.description}
                                     onChange={e => setJobForm({ ...jobForm, description: e.target.value })}
                                     required

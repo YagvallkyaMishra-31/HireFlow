@@ -9,30 +9,41 @@ const escapeRegExp = (string) => {
 };
 
 const createJob = asyncHandler(async (req, res) => {
-    const { title, description, company } = req.body;
+    const { title, description, company, requiredSkills, experienceRequired, location } = req.body;
 
     if (!title || !description || !company) {
         res.status(400);
         throw new Error('Please add title, description and company');
     }
 
-    // Extract skills from description (simple keyword matching)
-    const commonSkills = [
-        'React', 'Node.js', 'Node', 'JavaScript', 'TypeScript', 'Python', 'Java', 'C++',
-        'SQL', 'MongoDB', 'AWS', 'Azure', 'Docker', 'Kubernetes', 'HTML', 'CSS',
-        'Tailwind', 'Next.js', 'Express', 'Angular', 'Vue', 'PHP', 'Ruby', 'Go',
-        'Swift', 'Kotlin', 'Flutter', 'Redux', 'GraphQL', 'REST', 'DevOps', 'CI/CD'
-    ];
+    // Use provided skills, or extract from description as fallback
+    let finalSkills = [];
 
-    const extractedSkills = commonSkills.filter(skill =>
-        new RegExp(`\\b${escapeRegExp(skill)}\\b`, 'i').test(description)
-    );
+    if (requiredSkills && requiredSkills.length > 0) {
+        // If skills provided explicitly (from form), use them
+        finalSkills = Array.isArray(requiredSkills)
+            ? requiredSkills.map(s => s.trim()).filter(Boolean)
+            : requiredSkills.split(',').map(s => s.trim()).filter(Boolean);
+    } else {
+        // Extract skills from description (simple keyword matching)
+        const commonSkills = [
+            'React', 'Node.js', 'Node', 'JavaScript', 'TypeScript', 'Python', 'Java', 'C++',
+            'SQL', 'MongoDB', 'AWS', 'Azure', 'Docker', 'Kubernetes', 'HTML', 'CSS',
+            'Tailwind', 'Next.js', 'Express', 'Angular', 'Vue', 'PHP', 'Ruby', 'Go',
+            'Swift', 'Kotlin', 'Flutter', 'Redux', 'GraphQL', 'REST', 'DevOps', 'CI/CD'
+        ];
+        finalSkills = commonSkills.filter(skill =>
+            new RegExp(`\\b${escapeRegExp(skill)}\\b`, 'i').test(description)
+        );
+    }
 
     const job = await Job.create({
         title,
         description,
         company,
-        requiredSkills: extractedSkills.length > 0 ? extractedSkills : [],
+        requiredSkills: finalSkills,
+        experienceRequired: experienceRequired ? Number(experienceRequired) : 0,
+        location: location || 'Remote',
         postedBy: req.user._id
     });
 

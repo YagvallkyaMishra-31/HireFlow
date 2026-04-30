@@ -63,6 +63,14 @@ const applicationSchema = new mongoose.Schema(
       type: String
     },
 
+    // 🔹 Resume & Cover Letter
+    resumeFilename: {
+      type: String
+    },
+    coverLetter: {
+      type: String
+    },
+
     // 🔹 Audit Timeline History
     history: {
       type: [historyEntrySchema],

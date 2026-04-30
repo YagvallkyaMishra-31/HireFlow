@@ -6,15 +6,18 @@ const {
     withdrawApplication,
     updateApplicationStatus,
     getApplicationsByJob,
-    getMyApplications
+    getMyApplications,
+    checkIfApplied,
+    upload
 } = require('../controllers/applicationController');
 
 const { protect } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
 
 // Candidate Routes
-router.post('/', protect, authorize('candidate'), applyToJob);
+router.post('/', protect, authorize('candidate'), upload.single('resume'), applyToJob);
 router.get('/my', protect, authorize('candidate'), getMyApplications);
+router.get('/check/:jobId', protect, authorize('candidate'), checkIfApplied);
 router.patch('/:id/withdraw', protect, authorize('candidate'), withdrawApplication);
 
 // Recruiter/Admin Routes

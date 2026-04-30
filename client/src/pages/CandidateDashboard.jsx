@@ -166,6 +166,32 @@ const CandidateDashboard = () => {
                                     </>
                                 )}
 
+                                {/* Resume & Cover Letter */}
+                                {(app.resumeFilename || app.coverLetter) && (
+                                    <div className="cd-attachments">
+                                        {app.resumeFilename && (
+                                            <a
+                                                href={`/uploads/${app.resumeFilename}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="cd-resume-link"
+                                            >
+                                                📄 View Resume
+                                            </a>
+                                        )}
+                                        {app.coverLetter && (
+                                            <div className="cd-cover-letter">
+                                                <span className="cd-cl-label">Cover Letter:</span>
+                                                <p className="cd-cl-text">
+                                                    {app.coverLetter.length > 150
+                                                        ? `${app.coverLetter.substring(0, 150)}...`
+                                                        : app.coverLetter}
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
                                 <Link to={`/jobs/${app.job?._id}`} className="details-link">
                                     View Job Details →
                                 </Link>
@@ -392,6 +418,58 @@ const CandidateDashboard = () => {
 
                 .details-link:hover {
                     text-decoration: underline;
+                }
+
+                .cd-attachments {
+                    margin-top: 1rem;
+                    padding: 0.85rem;
+                    background: #f8fafc;
+                    border-radius: 10px;
+                    border: 1px solid #e2e8f0;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.6rem;
+                }
+
+                .cd-resume-link {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.4rem;
+                    color: #2563eb;
+                    font-weight: 700;
+                    font-size: 0.85rem;
+                    text-decoration: none;
+                    padding: 0.4rem 0.75rem;
+                    background: #eff6ff;
+                    border-radius: 8px;
+                    width: fit-content;
+                    transition: all 0.15s;
+                }
+
+                .cd-resume-link:hover {
+                    background: #dbeafe;
+                    text-decoration: none;
+                }
+
+                .cd-cover-letter {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.25rem;
+                }
+
+                .cd-cl-label {
+                    font-size: 0.75rem;
+                    font-weight: 700;
+                    color: #64748b;
+                    text-transform: uppercase;
+                }
+
+                .cd-cl-text {
+                    font-size: 0.82rem;
+                    color: #475569;
+                    margin: 0;
+                    line-height: 1.5;
+                    font-style: italic;
                 }
 
                 .cd-empty {

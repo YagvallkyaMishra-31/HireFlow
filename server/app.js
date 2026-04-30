@@ -81,6 +81,11 @@ const authLimiter = rateLimit({
 app.use('/api', globalLimiter);
 app.use('/api/auth/login', authLimiter);
 
+// Health check endpoint (used by keep-alive)
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString() });
+});
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/jobs', jobRoutes);

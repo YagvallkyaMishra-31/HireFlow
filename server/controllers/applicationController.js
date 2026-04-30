@@ -1,6 +1,39 @@
 const asyncHandler = require('express-async-handler');
 const Application = require('../models/Application');
 const Job = require('../models/Job');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// Multer storage config
+const uploadsDir = path.join(__dirname, '..', 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, uploadsDir),
+    filename: (req, file, cb) => {
+        const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(file.originalname)}`;
+        cb(null, uniqueName);
+    }
+});
+
+const fileFilter = (req, file, cb) => {
+    const allowedTypes = ['.pdf', '.doc', '.docx'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowedTypes.includes(ext)) {
+        cb(null, true);
+    } else {
+        cb(new Error('Only PDF, DOC, and DOCX files are allowed'), false);
+    }
+};
+
+const upload = multer({
+    storage,
+    fileFilter,
+    limits: { fileSize: 5 * 1024 * 1024 } // 5MB max
+});
 
 // Status Transition Rules
 const STATUS_TRANSITIONS = {
@@ -19,7 +52,7 @@ const STATUS_TRANSITIONS = {
 // @route   POST /api/applications
 // @access  Private/Candidate
 const applyToJob = asyncHandler(async (req, res) => {
-    const { job: jobId, notes } = req.body;
+    const { job: jobId, notes, coverLetter } = req.body;
 
     if (!jobId) {
         res.status(400);
@@ -84,6 +117,8 @@ const applyToJob = asyncHandler(async (req, res) => {
         job: jobId,
         candidate: req.user._id,
         notes,
+        coverLetter: coverLetter || undefined,
+        resumeFilename: req.file ? req.file.filename : undefined,
         matchScore,
         skillScore: Math.round(skillScore),
         experienceScore: Math.round(experienceScore),
@@ -292,10 +327,28 @@ const getMyApplications = asyncHandler(async (req, res) => {
     });
 });
 
+// @desc    Check if candidate already applied for a job
+// @route   GET /api/applications/check/:jobId
+// @access  Private/Candidate
+const checkIfApplied = asyncHandler(async (req, res) => {
+    const existing = await Application.findOne({
+        job: req.params.jobId,
+        candidate: req.user._id
+    }).lean();
+
+    res.json({
+        success: true,
+        applied: !!existing,
+        applicationId: existing ? existing._id : null
+    });
+});
+
 module.exports = {
     applyToJob,
     withdrawApplication,
     updateApplicationStatus,
     getApplicationsByJob,
-    getMyApplications
+    getMyApplications,
+    checkIfApplied,
+    upload
 };
